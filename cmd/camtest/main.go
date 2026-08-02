@@ -34,7 +34,7 @@ func main() {
 	}
 	defer camera.Close()
 
-	detector := perception.NewLineDetector(cfg.Camera.Width, cfg.Camera.Height, cfg.Camera.ROIY)
+	detector := perception.NewLineDetector(cfg.Camera.Width, cfg.Camera.Height, cfg.Camera.ROIY, cfg.Camera.LineThreshold)
 
 	log.Printf("camera %s %dx%d ROI_y=%d (mode=%s)",
 		cfg.Hardware.CameraDevice, cfg.Camera.Width, cfg.Camera.Height, cfg.Camera.ROIY, cfg.Mode)

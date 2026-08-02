@@ -10,7 +10,7 @@ Raspberry Pi Zero W 기반 라인 트레이서 RC카. Go + AWS AI-DLC.
 | `imutest` | MPU-9250 I2C |
 | `lidartest` | RPLidar A1 `/dev/ttyUSB0` |
 | `camtest` | Camera + line detection |
-| `motortest` | Motor spin test (`-confirm` required) |
+| `pcatest` | PCA9685 servo + ESC (`-confirm`) |
 
 ```bash
 # Mock (dev PC)

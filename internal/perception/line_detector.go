@@ -8,13 +8,17 @@ import (
 
 // LineDetector extracts line position from camera frames.
 type LineDetector struct {
-	width  int
-	height int
-	roiY   int
+	width     int
+	height    int
+	roiY      int
+	threshold int
 }
 
-func NewLineDetector(width, height, roiY int) *LineDetector {
-	return &LineDetector{width: width, height: height, roiY: roiY}
+func NewLineDetector(width, height, roiY, threshold int) *LineDetector {
+	if threshold <= 0 {
+		threshold = 100
+	}
+	return &LineDetector{width: width, height: height, roiY: roiY, threshold: threshold}
 }
 
 // Detect finds the line centroid in a raw RGB frame.
@@ -33,8 +37,7 @@ func (d *LineDetector) Detect(frame []byte) domain.LinePosition {
 				break
 			}
 			r, g, b := frame[idx], frame[idx+1], frame[idx+2]
-			// Dark pixel threshold (black line on white surface)
-			if int(r)+int(g)+int(b) < 100 {
+			if int(r)+int(g)+int(b) < d.threshold {
 				sumX += float64(x)
 				count++
 			}

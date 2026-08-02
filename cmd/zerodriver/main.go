@@ -46,7 +46,7 @@ func main() {
 	}
 	defer pub.Close()
 
-	lineDetector := perception.NewLineDetector(cfg.Camera.Width, cfg.Camera.Height, cfg.Camera.ROIY)
+	lineDetector := perception.NewLineDetector(cfg.Camera.Width, cfg.Camera.Height, cfg.Camera.ROIY, cfg.Camera.LineThreshold)
 	imuReader := perception.NewIMUReader(devices.IMU)
 	lidarParser := perception.NewLidarParser(devices.Lidar)
 	fuser := fusion.New()
@@ -73,6 +73,11 @@ func main() {
 	}()
 
 	log.Printf("zerodriver starting (mode=%s, loop=%dHz)", cfg.Mode, cfg.Control.LoopHz)
+
+	if err := ctrl.Arm(ctx); err != nil {
+		log.Fatalf("ESC arm: %v", err)
+	}
+	log.Printf("ESC armed (%ds)", cfg.Control.ESCArmDelaySec)
 	ctrl.Start()
 
 	interval := time.Second / time.Duration(cfg.Control.LoopHz)

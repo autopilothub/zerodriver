@@ -22,6 +22,8 @@ type ControlConfig struct {
 	BaseSpeed        float64 `yaml:"base_speed"`
 	CornerSpeed      float64 `yaml:"corner_speed"`
 	CornerThreshold  float64 `yaml:"corner_threshold"`
+	LineLostSpeed    float64 `yaml:"line_lost_speed"`
+	ESCArmDelaySec   int     `yaml:"esc_arm_delay_sec"`
 }
 
 type PIDConfig struct {
@@ -40,9 +42,10 @@ type ObstacleConfig struct {
 }
 
 type CameraConfig struct {
-	Width  int `yaml:"width"`
-	Height int `yaml:"height"`
-	ROIY   int `yaml:"roi_y"` // start row of region of interest
+	Width          int `yaml:"width"`
+	Height         int `yaml:"height"`
+	ROIY           int `yaml:"roi_y"`
+	LineThreshold  int `yaml:"line_threshold"` // RGB sum below = line pixel
 }
 
 type HardwareConfig struct {
@@ -97,6 +100,12 @@ func (c *Config) applyDefaults() {
 	if c.Control.CornerThreshold == 0 {
 		c.Control.CornerThreshold = 0.5
 	}
+	if c.Control.LineLostSpeed == 0 {
+		c.Control.LineLostSpeed = 0.2
+	}
+	if c.Control.ESCArmDelaySec == 0 {
+		c.Control.ESCArmDelaySec = 2
+	}
 	if c.PID.Steering.Kp == 0 {
 		c.PID.Steering.Kp = 0.8
 	}
@@ -114,6 +123,9 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Camera.ROIY == 0 {
 		c.Camera.ROIY = 160
+	}
+	if c.Camera.LineThreshold == 0 {
+		c.Camera.LineThreshold = 100
 	}
 	if c.Hardware.I2CAddr == 0 {
 		c.Hardware.I2CAddr = 0x68

@@ -49,6 +49,9 @@ PASS
 ### 2단계: 개별 센서 테스트
 
 ```bash
+# PCA9685 (서보 + ESC) — 차량 들어 올린 상태!
+./pcatest-armv6 -config zerodriver-hardware.yaml -confirm
+
 # IMU
 ./imutest-armv6 -config zerodriver-hardware.yaml -duration 5s
 

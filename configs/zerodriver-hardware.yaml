@@ -5,6 +5,8 @@ control:
   base_speed: 0.6
   corner_speed: 0.3
   corner_threshold: 0.5
+  line_lost_speed: 0.2
+  esc_arm_delay_sec: 2
 
 pid:
   steering:
@@ -20,6 +22,7 @@ camera:
   width: 320
   height: 240
   roi_y: 160
+  line_threshold: 100
 
 hardware:
   i2c_bus: "/dev/i2c-1"

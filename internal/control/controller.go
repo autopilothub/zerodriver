@@ -1,6 +1,9 @@
 package control
 
 import (
+	"context"
+	"time"
+
 	"github.com/autopilothub/zerodriver/internal/config"
 	"github.com/autopilothub/zerodriver/internal/domain"
 	"github.com/autopilothub/zerodriver/internal/hal"
@@ -8,10 +11,10 @@ import (
 
 // Controller orchestrates PID, state machine, and motor output.
 type Controller struct {
-	pid       *PIDController
+	pid          *PIDController
 	stateMachine *StateMachine
-	motor     hal.Motor
-	cfg       *config.Config
+	motor        hal.Motor
+	cfg          *config.Config
 }
 
 func NewController(cfg *config.Config, motor hal.Motor) *Controller {
@@ -20,6 +23,21 @@ func NewController(cfg *config.Config, motor hal.Motor) *Controller {
 		stateMachine: NewStateMachine(cfg.Obstacle.StopDistanceCM),
 		motor:        motor,
 		cfg:          cfg,
+	}
+}
+
+// Arm holds throttle at zero so the ESC can initialize (typical 1-2s).
+func (c *Controller) Arm(ctx context.Context) error {
+	delay := time.Duration(c.cfg.Control.ESCArmDelaySec) * time.Second
+	if delay <= 0 {
+		return nil
+	}
+	c.motor.Drive(0, 0)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(delay):
+		return nil
 	}
 }
 
@@ -46,8 +64,13 @@ func (c *Controller) Tick(input domain.FusedInput, dt float64) domain.ControlCom
 	case domain.StateTracing:
 		steering := c.pid.Compute(input.LineOffset+input.YawCorrection, dt)
 		throttle := c.cfg.Control.BaseSpeed
-		if abs(steering) > c.cfg.Control.CornerThreshold {
-			throttle = c.cfg.Control.CornerSpeed
+		if !input.LineDetected {
+			throttle = c.cfg.Control.LineLostSpeed
+		}
+		if c.cfg.Control.CornerThreshold > 0 && abs(steering) > c.cfg.Control.CornerThreshold {
+			if throttle > c.cfg.Control.CornerSpeed {
+				throttle = c.cfg.Control.CornerSpeed
+			}
 		}
 		cmd = domain.ControlCommand{Steering: steering, Throttle: throttle}
 
