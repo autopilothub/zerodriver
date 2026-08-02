@@ -33,7 +33,7 @@ func main() {
 	}
 	defer imu.Close()
 
-	log.Printf("MPU-9250 on %s addr=0x%02X (mode=%s)", cfg.Hardware.I2CBus, cfg.Hardware.I2CAddr, cfg.Mode)
+	log.Printf("IMU on %s addr=0x%02X (mode=%s)", cfg.Hardware.I2CBus, cfg.Hardware.I2CAddr, cfg.Mode)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)

@@ -16,24 +16,24 @@ import (
 )
 
 const (
-	mpu9250RegWHOAmI     = 0x75
-	mpu9250RegPWRMgmt1   = 0x6B
-	mpu9250RegAccelXOutH = 0x3B
-	mpu9250WhoAmIValue   = 0x71
-	mpu9250AccelScale    = 16384.0 // ±2g
-	mpu9250GyroScale     = 131.0   // ±250°/s
+	mpuRegWHOAmI     = 0x75
+	mpuRegPWRMgmt1   = 0x6B
+	mpuRegAccelXOutH = 0x3B
+	mpuAccelScale    = 16384.0 // ±2g
+	mpuGyroScale     = 131.0   // ±250°/s
 )
 
-// MPU9250 reads orientation from the MPU-9250 IMU over I2C.
+// MPU9250 reads orientation from MPU-6500/9250/9255 over I2C.
 type MPU9250 struct {
 	mu       sync.Mutex
 	bus      i2c.BusCloser
 	dev      i2c.Dev
+	chip     string
 	yaw      float64
 	lastRead time.Time
 }
 
-// NewMPU9250 opens and initializes the MPU-9250 on the given I2C bus.
+// NewMPU9250 opens and initializes an MPU-6500/9250/9255 on the given I2C bus.
 func NewMPU9250(busName string, addr int) (*MPU9250, error) {
 	if _, err := host.Init(); err != nil {
 		return nil, fmt.Errorf("periph init: %w", err)
@@ -46,17 +46,17 @@ func NewMPU9250(busName string, addr int) (*MPU9250, error) {
 
 	dev := i2c.Dev{Addr: uint16(addr), Bus: bus}
 
-	who, err := i2cReadReg(&dev, mpu9250RegWHOAmI)
+	who, err := i2cReadReg(&dev, mpuRegWHOAmI)
 	if err != nil {
 		bus.Close()
 		return nil, fmt.Errorf("read WHO_AM_I: %w", err)
 	}
-	if who != mpu9250WhoAmIValue {
+	if !IsSupportedMPU(who) {
 		bus.Close()
-		return nil, fmt.Errorf("unexpected WHO_AM_I: 0x%02X (want 0x%02X)", who, mpu9250WhoAmIValue)
+		return nil, fmt.Errorf("unsupported IMU WHO_AM_I: 0x%02X (expected MPU-6500/9250/9255)", who)
 	}
 
-	if err := i2cWriteReg(&dev, mpu9250RegPWRMgmt1, 0x00); err != nil {
+	if err := i2cWriteReg(&dev, mpuRegPWRMgmt1, 0x00); err != nil {
 		bus.Close()
 		return nil, fmt.Errorf("wake device: %w", err)
 	}
@@ -66,6 +66,7 @@ func NewMPU9250(busName string, addr int) (*MPU9250, error) {
 	return &MPU9250{
 		bus:      bus,
 		dev:      dev,
+		chip:     MPUChipName(who),
 		lastRead: time.Now(),
 	}, nil
 }
@@ -87,7 +88,7 @@ func (m *MPU9250) Read() (domain.Attitude, error) {
 	defer m.mu.Unlock()
 
 	buf := make([]byte, 14)
-	if err := m.dev.Tx([]byte{mpu9250RegAccelXOutH}, buf); err != nil {
+	if err := m.dev.Tx([]byte{mpuRegAccelXOutH}, buf); err != nil {
 		return domain.Attitude{}, fmt.Errorf("read sensors: %w", err)
 	}
 
@@ -102,7 +103,7 @@ func (m *MPU9250) Read() (domain.Attitude, error) {
 	dt := now.Sub(m.lastRead).Seconds()
 	m.lastRead = now
 
-	gyroZ := float64(gz) / mpu9250GyroScale
+	gyroZ := float64(gz) / mpuGyroScale
 	m.yaw += gyroZ * dt
 
 	roll := math.Atan2(float64(ay), float64(az)) * 180 / math.Pi
@@ -123,4 +124,9 @@ func (m *MPU9250) Close() error {
 		return m.bus.Close()
 	}
 	return nil
+}
+
+// ChipName returns the detected IMU model (e.g. "MPU-6500").
+func (m *MPU9250) ChipName() string {
+	return m.chip
 }

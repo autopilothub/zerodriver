@@ -5,7 +5,7 @@
 | 부품 | 모델 (권장) | 수량 | 비고 |
 |------|------------|------|------|
 | SBC | Raspberry Pi Zero W | 1 | WiFi 내장 |
-| IMU | MPU-9250 breakout | 1 | I2C, 9-DOF |
+| IMU | MPU-9250 / MPU-6500 breakout | 1 | I2C, 6~9-DOF |
 | 카메라 | Pi Camera Module v2 / HQ | 1 | CSI 커넥터 |
 | LiDAR | Slamtec RPLidar A1 | 1 | USB serial, 5V |
 | 모터 드라이버 | DRV8833 / L298N | 1 | 2채널 DC |
@@ -16,16 +16,21 @@
 
 ## 핀맵 (Raspberry Pi Zero W)
 
-### MPU-9250 (I2C)
+### MPU-9250 / MPU-6500 (I2C)
 
-| MPU-9250 | Pi Zero W | GPIO (BCM) |
-|----------|-----------|------------|
+| IMU | Pi Zero W | GPIO (BCM) |
+|-----|-----------|------------|
 | VCC | 3.3V | — |
 | GND | GND | — |
 | SDA | Pin 3 | GPIO2 |
 | SCL | Pin 5 | GPIO3 |
 
 I2C 주소: `0x68` (AD0=LOW) 또는 `0x69` (AD0=HIGH)
+
+지원 칩 (WHO_AM_I 자동 인식):
+- `0x70` — MPU-6500 (6축: 가속도+자이로)
+- `0x71` — MPU-9250 (9축)
+- `0x73` — MPU-9255
 
 ### RPLidar A1 (USB Serial)
 
