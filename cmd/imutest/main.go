@@ -1,4 +1,4 @@
-// IMU diagnostic tool for MPU-9250.
+// IMU diagnostic tool for MPU-9250 / MPU-6500.
 // Usage: go run ./cmd/imutest -config configs/zerodriver-hardware.yaml -duration 5s
 package main
 
@@ -33,7 +33,21 @@ func main() {
 	}
 	defer imu.Close()
 
-	log.Printf("IMU on %s addr=0x%02X (mode=%s)", cfg.Hardware.I2CBus, cfg.Hardware.I2CAddr, cfg.Mode)
+	chip := "IMU"
+	if named, ok := imu.(interface{ ChipName() string }); ok {
+		chip = named.ChipName()
+	}
+	log.Printf("%s on %s addr=0x%02X (mode=%s)", chip, cfg.Hardware.I2CBus, cfg.Hardware.I2CAddr, cfg.Mode)
+	if who, ok := imu.(interface{ WhoAmI() byte }); ok {
+		log.Printf("WHO_AM_I=0x%02X", who.WhoAmI())
+	}
+	if mag, ok := imu.(interface{ HasMagnetometer() bool }); ok {
+		if mag.HasMagnetometer() {
+			log.Printf("compass: AK8963 active")
+		} else {
+			log.Printf("compass: not available (6-axis IMU or AK8963 not detected)")
+		}
+	}
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -61,8 +75,13 @@ func main() {
 				log.Printf("read error: %v", err)
 				continue
 			}
-			fmt.Printf("yaw=%.1f° pitch=%.1f° roll=%.1f° gyroZ=%.1f°/s\n",
+			line := fmt.Sprintf("yaw=%.1f° pitch=%.1f° roll=%.1f° gyroZ=%.1f°/s",
 				att.Yaw, att.Pitch, att.Roll, att.GyroZ)
+			if att.HasMag {
+				line += fmt.Sprintf(" heading=%.0f° mag=(%.1f,%.1f,%.1f)µT",
+					att.Heading, att.MagX, att.MagY, att.MagZ)
+			}
+			fmt.Println(line)
 		}
 	}
 }

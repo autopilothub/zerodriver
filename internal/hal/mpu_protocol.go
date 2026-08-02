@@ -21,10 +21,20 @@ func MPUChipName(who byte) string {
 	}
 }
 
-// IsSupportedMPU reports whether the WHO_AM_I value is a supported 6-axis IMU.
+// IsSupportedMPU reports whether the WHO_AM_I value is a supported IMU.
 func IsSupportedMPU(who byte) bool {
 	switch who {
 	case mpuWHOAmIMP6500, mpuWHOAmIMP9250, mpuWHOAmIMP9255:
+		return true
+	default:
+		return false
+	}
+}
+
+// MPUHasMagnetometer reports whether the chip ID includes an AK8963 magnetometer.
+func MPUHasMagnetometer(who byte) bool {
+	switch who {
+	case mpuWHOAmIMP9250, mpuWHOAmIMP9255:
 		return true
 	default:
 		return false

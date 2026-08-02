@@ -73,6 +73,13 @@ func testIMU(cfg *config.Config) bool {
 		chip = named.ChipName()
 	}
 	fmt.Printf("\n--- IMU (%s) ---\n", chip)
+	if who, ok := imu.(interface{ WhoAmI() byte }); ok {
+		fmt.Printf("  WHO_AM_I=0x%02X", who.WhoAmI())
+		if mag, ok := imu.(interface{ HasMagnetometer() bool }); ok && mag.HasMagnetometer() {
+			fmt.Print(" compass=AK8963")
+		}
+		fmt.Println()
+	}
 
 	for i := 0; i < 5; i++ {
 		att, err := imu.Read()
@@ -80,8 +87,11 @@ func testIMU(cfg *config.Config) bool {
 			fmt.Printf("FAIL read: %v\n", err)
 			return false
 		}
-		fmt.Printf("  yaw=%.1f° pitch=%.1f° roll=%.1f° gyroZ=%.1f°/s\n",
-			att.Yaw, att.Pitch, att.Roll, att.GyroZ)
+		fmt.Printf("  yaw=%.1f° pitch=%.1f° roll=%.1f° gyroZ=%.1f°/s", att.Yaw, att.Pitch, att.Roll, att.GyroZ)
+		if att.HasMag {
+			fmt.Printf(" heading=%.0f° mag=(%.1f,%.1f,%.1f)µT", att.Heading, att.MagX, att.MagY, att.MagZ)
+		}
+		fmt.Println()
 		time.Sleep(200 * time.Millisecond)
 	}
 	fmt.Println("PASS")

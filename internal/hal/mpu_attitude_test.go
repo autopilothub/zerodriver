@@ -26,3 +26,10 @@ func TestComputeTiltFromAccelUprightX(t *testing.T) {
 		t.Fatalf("X-up mount: pitch=%.2f want ~90", pitch)
 	}
 }
+
+func TestComputeMagHeadingNorth(t *testing.T) {
+	h := computeMagHeading(20, 0, 40, 0, 0)
+	if h < 0 || h > 90 {
+		t.Fatalf("heading=%.1f", h)
+	}
+}

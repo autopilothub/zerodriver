@@ -50,11 +50,12 @@ rpicam-hello --list-cameras  # OV5647 등 확인
 sudo apt install -y rpicam-apps
 ```
 
-## MPU-9250
+## MPU-9250 / MPU-6500
 
-- WHO_AM_I 레지스터(0x75)에서 0x71 확인
-- 가속도 ±2g, 자이로 ±250°/s 기본 스케일
-- Yaw는 자이로 Z축 적분 (magnetometer 미사용)
+- WHO_AM_I (0x75): `0x71`=MPU-9250, `0x70`=MPU-6500, `0x73`=MPU-9255
+- MPU-9250/9255: AK8963 자력계 (compass) — `heading`, `mag_x/y/z` 출력
+- MPU-6500: 6축만 (compass 없음)
+- Yaw: 자이로 Z 적분; compass 있으면 `heading` 참고 가능
 
 ## RPLidar A1
 

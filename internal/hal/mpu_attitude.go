@@ -14,3 +14,18 @@ func computeTiltFromAccel(ax, ay, az int16) (pitch, roll float64) {
 	pitch = math.Atan2(-axf, horiz) * 180 / math.Pi
 	return pitch, roll
 }
+
+// computeMagHeading returns tilt-compensated compass heading in degrees [0, 360).
+func computeMagHeading(mx, my, mz, pitchDeg, rollDeg float64) float64 {
+	pitch := pitchDeg * math.Pi / 180
+	roll := rollDeg * math.Pi / 180
+
+	xh := mx*math.Cos(pitch) + mz*math.Sin(pitch)
+	yh := mx*math.Sin(roll)*math.Sin(pitch) + my*math.Cos(roll) - mz*math.Sin(roll)*math.Cos(pitch)
+
+	heading := math.Atan2(yh, xh) * 180 / math.Pi
+	if heading < 0 {
+		heading += 360
+	}
+	return heading
+}
