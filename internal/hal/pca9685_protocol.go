@@ -6,6 +6,7 @@ const (
 	pca9685DefaultFreqHz   = 50
 	pca9685OscClockHz      = 25_000_000
 	pca9685Steps           = 4096
+	pca9685AddrAllCall     = 0x70 // PCA9685 broadcast address (shows on i2cdetect)
 	pca9685DefaultMinUs    = 1000
 	pca9685DefaultCenterUs = 1500
 	pca9685DefaultMaxUs    = 2000

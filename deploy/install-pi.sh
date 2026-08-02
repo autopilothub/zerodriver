@@ -48,7 +48,7 @@ fi
 
 echo ""
 echo "=== Verify ==="
-echo "  i2cdetect -y 1        # expect 0x40 (PCA9685), 0x68 (MPU-9250)"
+echo "  i2cdetect -y 1        # 0x40=PCA9685, 0x68=IMU, 0x70=PCA9685 All Call"
 echo "  ls /dev/ttyUSB0       # RPLidar A1"
 echo "  $INSTALL_DIR/hwtest -config $INSTALL_DIR/zerodriver.yaml"
 echo "  $INSTALL_DIR/pcatest -config $INSTALL_DIR/zerodriver.yaml -confirm"

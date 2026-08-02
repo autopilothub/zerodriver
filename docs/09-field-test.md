@@ -100,7 +100,7 @@ pid:
 
 | 증상 | 확인 | 해결 |
 |------|------|------|
-| IMU FAIL | `i2cdetect -y 1` | 0x68 확인, 배선 점검 |
+| IMU FAIL | `i2cdetect -y 1` | `0x68` 확인 (0x70은 PCA9685 All Call) |
 | LiDAR FAIL | `ls /dev/ttyUSB0` | USB 연결, dialout 그룹 |
 | Camera FAIL | `libcamera-hello` | CSI 케이블, camera enable |
 | line not detected | `camtest -save frame.ppm` | 조명, 라인 대비, ROI 조정 |
