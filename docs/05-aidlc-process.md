@@ -51,9 +51,9 @@ AI-DLC(AI-Driven Development Life Cycle)는 AWS가 제안한 방법론으로,
 
 | Bolt | 상태 | 산출물 |
 |------|------|--------|
-| 4.1 진단 도구 | ✅ | `cmd/{imutest,camtest,motortest,lidartest,hwtest}` |
-| 4.2 실기 E2E | ⬜ | Pi Zero W 주행 검증 |
-| 4.3 PID 튜닝 | ⬜ | 실측 게인 최적화 |
+| 4.1 진단 도구 | ✅ | `cmd/{imutest,camtest,motortest,lidartest,hwtest,pcatest}` |
+| 4.2 실기 E2E | 🔄 | Pi Zero W 주행 검증 |
+| 4.3 PID 튜닝 | 🔄 | 실측 게인 최적화 |
 
 ## Human Validation Gate
 
