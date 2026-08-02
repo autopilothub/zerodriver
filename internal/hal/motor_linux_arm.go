@@ -16,10 +16,10 @@ import (
 // PiMotor drives a dual-motor differential drive via GPIO soft-PWM.
 type PiMotor struct {
 	mu        sync.Mutex
-	leftPWM   gpio.PinOut
-	leftDir   gpio.PinOut
-	rightPWM  gpio.PinOut
-	rightDir  gpio.PinOut
+	leftPWM   gpio.PinIO
+	leftDir   gpio.PinIO
+	rightPWM  gpio.PinIO
+	rightDir  gpio.PinIO
 	leftDuty  float64
 	rightDuty float64
 	stopCh    chan struct{}
@@ -60,12 +60,15 @@ func NewPiMotor(lPWM, lDir, rPWM, rDir int) (*PiMotor, error) {
 	return m, nil
 }
 
-func openPin(bcm int) (gpio.PinOut, error) {
+func openPin(bcm int) (gpio.PinIO, error) {
 	pin := gpioreg.ByName("GPIO" + strconv.Itoa(bcm))
 	if pin == nil {
 		return nil, fmt.Errorf("GPIO%d not found", bcm)
 	}
-	return pin.Out(gpio.Low)
+	if err := pin.Out(gpio.Low); err != nil {
+		return nil, err
+	}
+	return pin, nil
 }
 
 func (m *PiMotor) Set(left, right float64) error {
@@ -110,7 +113,7 @@ func (m *PiMotor) pwmLoop() {
 	}
 }
 
-func (m *PiMotor) driveSide(pwm, dir gpio.PinOut, duty float64, halfPeriod time.Duration) {
+func (m *PiMotor) driveSide(pwm, dir gpio.PinIO, duty float64, halfPeriod time.Duration) {
 	absDuty := duty
 	forward := true
 	if absDuty < 0 {

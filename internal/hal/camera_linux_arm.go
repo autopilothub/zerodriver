@@ -6,18 +6,26 @@ import (
 	"bytes"
 	"fmt"
 	"image/jpeg"
+	"strings"
 	"sync"
 
 	"github.com/blackjack/webcam"
 )
 
+// V4L2 pixel format fourCC codes.
+const (
+	v4l2PixFmtMJPEG = webcam.PixelFormat(0x47504A50) // 'MJPG'
+	v4l2PixFmtYUYV  = webcam.PixelFormat(0x56595559) // 'YUYV'
+)
+
 // V4L2Camera captures frames from a V4L2 device (Pi Camera via libcamera-compat).
 type V4L2Camera struct {
-	mu     sync.Mutex
-	cam    *webcam.Webcam
-	width  int
-	height int
-	format webcam.PixelFormat
+	mu       sync.Mutex
+	cam      *webcam.Webcam
+	width    int
+	height   int
+	format   webcam.PixelFormat
+	isMJPEG  bool
 }
 
 // NewV4L2Camera opens the V4L2 device and configures capture format.
@@ -27,32 +35,33 @@ func NewV4L2Camera(device string, width, height int) (*V4L2Camera, error) {
 		return nil, fmt.Errorf("open camera %q: %w", device, err)
 	}
 
-	formats := cam.GetSupportedFormats()
-	var format webcam.PixelFormat
-	for f := range formats {
-		if f == webcam.MJPEG {
-			format = webcam.MJPEG
-			break
-		}
-	}
-	if format == 0 {
-		for f := range formats {
-			format = f
-			break
-		}
-	}
+	format, isMJPEG := selectPixelFormat(cam.GetSupportedFormats())
 	if format == 0 {
 		cam.Close()
 		return nil, fmt.Errorf("no supported pixel format on %q", device)
 	}
 
-	cam.SetImageFormat(format, uint32(width), uint32(height))
+	actualFmt, actualW, actualH, err := cam.SetImageFormat(format, uint32(width), uint32(height))
+	if err != nil {
+		cam.Close()
+		return nil, fmt.Errorf("set image format: %w", err)
+	}
+
+	_ = cam.SetBufferCount(2)
 
 	c := &V4L2Camera{
-		cam:    cam,
-		width:  width,
-		height: height,
-		format: format,
+		cam:     cam,
+		width:   int(actualW),
+		height:  int(actualH),
+		format:  actualFmt,
+		isMJPEG: isMJPEG,
+	}
+
+	if c.width == 0 {
+		c.width = width
+	}
+	if c.height == 0 {
+		c.height = height
 	}
 
 	if err := cam.StartStreaming(); err != nil {
@@ -63,17 +72,47 @@ func NewV4L2Camera(device string, width, height int) (*V4L2Camera, error) {
 	return c, nil
 }
 
+func selectPixelFormat(formats map[webcam.PixelFormat]string) (webcam.PixelFormat, bool) {
+	// Prefer MJPEG for lower CPU on Pi Zero W.
+	if _, ok := formats[v4l2PixFmtMJPEG]; ok {
+		return v4l2PixFmtMJPEG, true
+	}
+	for f, desc := range formats {
+		if strings.Contains(strings.ToUpper(desc), "MJPG") {
+			return f, true
+		}
+	}
+	if _, ok := formats[v4l2PixFmtYUYV]; ok {
+		return v4l2PixFmtYUYV, false
+	}
+	for f, desc := range formats {
+		if strings.Contains(strings.ToUpper(desc), "YUYV") {
+			return f, false
+		}
+	}
+	for f := range formats {
+		return f, false
+	}
+	return 0, false
+}
+
 func (c *V4L2Camera) Capture() ([]byte, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if err := c.cam.WaitForFrame(500); err != nil {
+		return nil, fmt.Errorf("wait for frame: %w", err)
+	}
 
 	frame, err := c.cam.ReadFrame()
 	if err != nil {
 		return nil, fmt.Errorf("read frame: %w", err)
 	}
-	defer c.cam.QBuffer(frame)
+	if len(frame) == 0 {
+		return nil, fmt.Errorf("empty frame")
+	}
 
-	if c.format == webcam.MJPEG {
+	if c.isMJPEG {
 		return decodeMJPEGToRGB(frame, c.width, c.height)
 	}
 	return yuyvToRGB(frame, c.width, c.height)
@@ -85,7 +124,10 @@ func (c *V4L2Camera) Height() int { return c.height }
 func (c *V4L2Camera) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.cam.StopStreaming()
+	if c.cam == nil {
+		return nil
+	}
+	_ = c.cam.StopStreaming()
 	return c.cam.Close()
 }
 
