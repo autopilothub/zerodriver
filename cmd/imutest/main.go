@@ -39,7 +39,7 @@ func main() {
 	}
 	log.Printf("%s on %s addr=0x%02X (mode=%s)", chip, cfg.Hardware.I2CBus, cfg.Hardware.I2CAddr, cfg.Mode)
 	if who, ok := imu.(interface{ WhoAmI() byte }); ok {
-		log.Printf("WHO_AM_I=0x%02X", who.WhoAmI())
+		log.Printf("WHO_AM_I=0x%02X (%s)", who.WhoAmI(), hal.MPUCoreName(who.WhoAmI()))
 	}
 	if mag, ok := imu.(interface{ HasMagnetometer() bool }); ok {
 		if mag.HasMagnetometer() {

@@ -107,7 +107,8 @@ pid:
 
 | 증상 | 확인 | 해결 |
 |------|------|------|
-| IMU FAIL | `i2cdetect -y 1` | `0x68` 확인 (0x70은 PCA9685 All Call) |
+| IMU FAIL | `i2cdetect -y 1` | `0x68` 확인; MPU-9250이면 bypass 후 `0x0C` |
+| WHO_AM_I=0x70 | 정상 (MPU-9250 코어) | `imu_model: mpu9250`, imutest에서 compass 확인 |
 | LiDAR FAIL | `ls /dev/ttyUSB0` | USB 연결, dialout 그룹 |
 | Camera FAIL | `rpicam-hello --list-cameras` | CSI 케이블, `sudo apt install rpicam-apps` |
 | `start streaming: invalid argument` | V4L2 unicam 노드 | `camera_backend: rpicam` (기본값) |

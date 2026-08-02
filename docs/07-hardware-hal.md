@@ -52,10 +52,10 @@ sudo apt install -y rpicam-apps
 
 ## MPU-9250 / MPU-6500
 
-- WHO_AM_I (0x75): `0x71`=MPU-9250, `0x70`=MPU-6500, `0x73`=MPU-9255
-- MPU-9250/9255: AK8963 자력계 (compass) — `heading`, `mag_x/y/z` 출력
-- MPU-6500: 6축만 (compass 없음)
-- Yaw: 자이로 Z 적분; compass 있으면 `heading` 참고 가능
+- **WHO_AM_I `0x70`은 MPU-9250에서도 정상** — MPU-9250 = MPU-6500 6축 코어 + AK8963 지자기
+- `imu_model: mpu9250` (기본): I2C bypass 후 AK8963(`0x0C`) 초기화, `heading`/`mag` 출력
+- `imu_model: mpu6500`: 6축만 (지자기 비활성)
+- Yaw: 자이로 Z 적분; compass `heading`은 절대 방위 참고용
 
 ## RPLidar A1
 

@@ -35,7 +35,8 @@ type MPU9250 struct {
 }
 
 // NewMPU9250 opens and initializes an MPU-6500/9250/9255 on the given I2C bus.
-func NewMPU9250(busName string, addr int) (*MPU9250, error) {
+// imuModel: auto, mpu6500, or mpu9250 (see hardware.imu_model).
+func NewMPU9250(busName string, addr int, imuModel string) (*MPU9250, error) {
 	if _, err := host.Init(); err != nil {
 		return nil, fmt.Errorf("periph init: %w", err)
 	}
@@ -67,23 +68,25 @@ func NewMPU9250(busName string, addr int) (*MPU9250, error) {
 	m := &MPU9250{
 		bus:      bus,
 		dev:      dev,
-		chip:     MPUChipName(who),
 		whoAmI:   who,
 		lastRead: time.Now(),
 	}
 
-	mag, ok, err := initAK8963(&dev, bus)
-	if err != nil {
-		bus.Close()
-		return nil, err
-	}
-	if ok {
-		m.mag = mag
-		m.hasMag = true
-		if who == mpuWHOAmIMP6500 {
-			m.chip = "MPU-9250"
+	if ShouldProbeMagnetometer(imuModel) {
+		mag, ok, err := initAK8963(&dev, bus)
+		if err != nil {
+			bus.Close()
+			return nil, err
+		}
+		if ok {
+			m.mag = mag
+			m.hasMag = true
+		} else if RequireMagnetometer(imuModel) {
+			bus.Close()
+			return nil, fmt.Errorf("imu_model=mpu9250 but AK8963 not found at 0x0C (check bypass: i2cdetect should show 0x68 and 0x0C)")
 		}
 	}
+	m.chip = ResolveMPUChipName(who, m.hasMag)
 
 	return m, nil
 }

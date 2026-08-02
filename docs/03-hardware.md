@@ -27,11 +27,32 @@
 
 I2C 주소: `0x68` (AD0=LOW) 또는 `0x69` (AD0=HIGH)
 
-지원 칩 (레지스터 `0x75` WHO_AM_I 값, 버스 주소와 별개):
+지원 칩 — 레지스터 `0x75` WHO_AM_I (I2C 주소 `0x68`에서 읽음):
 
-- `0x70` — MPU-6500 (6축)
-- `0x71` — MPU-9250 (9축)
-- `0x73` — MPU-9255
+| WHO_AM_I | 모듈 | 비고 |
+|----------|------|------|
+| `0x70` | MPU-6500 **또는** MPU-9250 | MPU-9250도 내부 6축 코어가 6500이라 **0x70이 정상** |
+| `0x71` | MPU-9250 (일부 보드) | |
+| `0x73` | MPU-9255 | |
+
+MPU-9250 9축(나침반) 확인:
+
+```bash
+# Bypass 후 AK8963(0x0C)이 보여야 함
+sudo i2cdetect -y 1
+# 0x68 (6축 코어), 0x0C (AK8963 지자기), 0x40 (PCA9685), 0x70 (PCA9685 All Call)
+
+./bin/imutest-armv6 -config configs/zerodriver-hardware.yaml -duration 3s
+# compass: AK8963 active, heading=...°
+```
+
+설정 (`configs/zerodriver-hardware.yaml`):
+
+```yaml
+hardware:
+  i2c_addr: 0x68
+  imu_model: mpu9250   # mpu9250 | mpu6500 | auto
+```
 
 ### RPLidar A1 (USB Serial)
 
