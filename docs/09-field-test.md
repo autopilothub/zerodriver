@@ -104,6 +104,7 @@ pid:
 | LiDAR FAIL | `ls /dev/ttyUSB0` | USB 연결, dialout 그룹 |
 | Camera FAIL | `rpicam-hello --list-cameras` | CSI 케이블, `sudo apt install rpicam-apps` |
 | `start streaming: invalid argument` | V4L2 unicam 노드 | `camera_backend: auto` 또는 `rpicam` (기본값) |
+| `rpicam first frame: EOF` | rpicam-vid 즉시 종료 | `git pull` 후 재빌드; 수동 테스트: `rpicam-vid -n -t 5000 --width 640 --height 480 --codec yuv420 --inline -o /tmp/t.data` |
 | line not detected | `camtest -save frame.ppm` | 조명, 라인 대비, ROI 조정 |
 | 탈선 | verbose 로그 확인 | Kp 감소, corner_speed 감소 |
 | AVOIDING 고착 | lidartest | 전방 오탐지, scan_front_angle 조정 |
