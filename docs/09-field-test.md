@@ -25,13 +25,20 @@ scp bin/*-armv6 configs/zerodriver-hardware.yaml pi@raspberrypi.local:/home/pi/
 ### 1단계: 전체 하드웨어 점검
 
 ```bash
-chmod +x *-armv6
-./hwtest-armv6 -config zerodriver-hardware.yaml
+git pull
+./deploy/build-arm.sh
+
+# 순서대로 자동 점검 (IMU → Camera → LiDAR → hwtest)
+chmod +x deploy/verify-pi.sh
+./deploy/verify-pi.sh configs/zerodriver-hardware.yaml
+
+# 또는 수동
+./bin/hwtest-armv6 -config configs/zerodriver-hardware.yaml
 ```
 
 예상 출력:
 ```
---- IMU (MPU-9250) ---
+--- IMU (MPU-6500/9250) ---
   yaw=0.1° pitch=2.0° roll=-1.0° gyroZ=0.5°/s
 PASS
 
