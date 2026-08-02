@@ -119,19 +119,6 @@ func (p *PCA9685) SetPulseUs(channel int, pulseUs int) error {
 	return p.SetPWM(channel, PulseUsToTicks(pulseUs, p.freqHz))
 }
 
-// SetDuty sets a channel duty cycle 0.0-1.0.
-func (p *PCA9685) SetDuty(channel int, duty float64) error {
-	return p.SetPWM(channel, DutyToTicks(duty, p.freqHz))
-}
-
-// SetDigital sets a channel fully on or off (for motor direction pins).
-func (p *PCA9685) SetDigital(channel int, high bool) error {
-	if high {
-		return p.SetPWM(channel, pca9685Steps-1)
-	}
-	return p.SetPWM(channel, 0)
-}
-
 func (p *PCA9685) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
