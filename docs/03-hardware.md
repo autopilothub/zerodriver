@@ -9,6 +9,7 @@
 | 카메라 | Pi Camera Module v2 / HQ | 1 | CSI 커넥터 |
 | LiDAR | Slamtec RPLidar A1 | 1 | USB serial, 5V |
 | 모터 드라이버 | DRV8833 / L298N | 1 | 2채널 DC |
+| PWM/서보 | PCA9685 breakout | 1 | I2C 16채널 PWM |
 | DC 모터 | TT 기어드 모터 | 2 | 차동 구동 |
 | 배터리 | LiPo 2S 7.4V | 1 | BEC 5V for Pi |
 | 섀시 | 3D 프린트 / 키트 | 1 | 카메라 전방 하향 |
@@ -53,16 +54,35 @@ go build -o lidartest ./cmd/lidartest
 > Pi Zero W는 USB 포트가 1개(micro-USB OTG)이므로, LiDAR는 USB 허브 또는 OTG 어댑터로 연결한다.
 > GPIO UART(`/dev/serial0`) 대신 USB serial을 사용하면 WiFi/Bluetooth와 핀 충돌이 없다.
 
-### 모터 드라이버 (GPIO/PWM)
+### PCA9685 (서보 + 모터 PWM)
 
-| 기능 | Pi Zero W | GPIO (BCM) |
-|------|-----------|------------|
-| 모터 L PWM | Pin 32 | GPIO12 |
-| 모터 L DIR | Pin 36 | GPIO16 |
-| 모터 R PWM | Pin 33 | GPIO13 |
-| 모터 R DIR | Pin 11 | GPIO17 |
+MPU-9250과 동일 I2C 버스(`/dev/i2c-1`)에 연결.
 
-PWM 주파수: 1kHz (설정 가능)
+| PCA9685 | Pi Zero W | 비고 |
+|---------|-----------|------|
+| VCC | 3.3V 또는 5V | 보드 사양 확인 |
+| GND | GND | |
+| SDA | Pin 3 | GPIO2 |
+| SCL | Pin 5 | GPIO3 |
+
+I2C 주소: `0x40` (기본)
+
+| 채널 | 용도 | 연결 |
+|------|------|------|
+| CH0 | 조향 서보 | 서보 신호선 |
+| CH1 | 모터 L PWM | DRV8833 AIN1 |
+| CH2 | 모터 L DIR | DRV8833 AIN2 |
+| CH3 | 모터 R PWM | DRV8833 BIN1 |
+| CH4 | 모터 R DIR | DRV8833 BIN2 |
+
+- PWM 주파수: 50Hz (서보 호환)
+- 서보 펄스: 1000µs(좌) ~ 1500µs(중앙) ~ 2000µs(우)
+
+```bash
+# I2C 확인
+sudo i2cdetect -y 1
+# 0x40 (PCA9685), 0x68 (MPU-9250) 표시되어야 함
+```
 
 ### 카메라 (CSI)
 

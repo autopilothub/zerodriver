@@ -8,7 +8,8 @@ Pi Zero W 실제 하드웨어 드라이버. `linux && arm` 빌드 태그로만 �
 |------|------|-----------|
 | `mpu9250_linux_arm.go` | MPU-9250 IMU | I2C (`/dev/i2c-1`, 0x68) |
 | `rplidar_linux_arm.go` | RPLidar A1 | USB Serial (`/dev/ttyUSB0`, 115200) |
-| `motor_linux_arm.go` | DC 모터 x2 | GPIO soft-PWM |
+| `pca9685_linux_arm.go` | PCA9685 PWM | I2C (`0x40`, 50Hz) |
+| `pca9685_motor_linux_arm.go` | 서보 + DC 모터 | CH0=서보, CH1-4=모터 |
 | `camera_linux_arm.go` | Pi Camera | V4L2 (`/dev/video0`) |
 
 ## Mock vs Hardware
@@ -78,11 +79,32 @@ ls -l /dev/ttyUSB0
 ./lidartest -mode mock -duration 5s
 ```
 
-## 모터 (soft-PWM)
+## PCA9685 (서보 + 모터)
 
-- 1kHz 소프트웨어 PWM
-- BCM 핀: PWM=속도, DIR=방향
-- `Set(left, right)`: -1.0 ~ +1.0
+- **I2C 주소**: `0x40` (기본)
+- **주파수**: 50Hz (`pca9685_freq_hz`)
+- **채널 매핑** (`configs/zerodriver-hardware.yaml`):
+
+```yaml
+pca9685_addr: 0x40
+steering_channel: 0       # 조향 서보
+motor_l_pwm_channel: 1    # 좌측 모터 PWM
+motor_l_dir_channel: 2    # 좌측 모터 방향
+motor_r_pwm_channel: 3    # 우측 모터 PWM
+motor_r_dir_channel: 4    # 우측 모터 방향
+servo_min_us: 1000
+servo_center_us: 1500
+servo_max_us: 2000
+```
+
+- 조향: PID steering → 서보 펄스 폭
+- 주행: left/right 속도 → PWM duty + DIR 채널
+
+## 모터 (DRV8833 + PCA9685)
+
+- PCA9685 CH1-CH4 → DRV8833 입력
+- DIR 채널: HIGH=전진, LOW=후진
+- PWM 채널: 속도 (0.0~1.0 duty)
 
 ## 카메라 (V4L2)
 

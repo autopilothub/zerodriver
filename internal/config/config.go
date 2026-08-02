@@ -46,16 +46,22 @@ type CameraConfig struct {
 }
 
 type HardwareConfig struct {
-	I2CBus       string `yaml:"i2c_bus"`
-	I2CAddr      int    `yaml:"i2c_addr"`
-	LidarModel   string `yaml:"lidar_model"`
-	LidarPort    string `yaml:"lidar_port"`
-	LidarBaud    int    `yaml:"lidar_baud"`
-	CameraDevice string `yaml:"camera_device"`
-	MotorLPWM    int    `yaml:"motor_l_pwm"`
-	MotorLDir    int    `yaml:"motor_l_dir"`
-	MotorRPWM    int    `yaml:"motor_r_pwm"`
-	MotorRDir    int    `yaml:"motor_r_dir"`
+	I2CBus            string `yaml:"i2c_bus"`
+	I2CAddr           int    `yaml:"i2c_addr"`
+	LidarModel        string `yaml:"lidar_model"`
+	LidarPort         string `yaml:"lidar_port"`
+	LidarBaud         int    `yaml:"lidar_baud"`
+	CameraDevice      string `yaml:"camera_device"`
+	PCA9685Addr       int    `yaml:"pca9685_addr"`
+	PCA9685FreqHz     int    `yaml:"pca9685_freq_hz"`
+	SteeringChannel   int    `yaml:"steering_channel"`
+	MotorLPWMChannel  int    `yaml:"motor_l_pwm_channel"`
+	MotorLDirChannel  int    `yaml:"motor_l_dir_channel"`
+	MotorRPWMChannel  int    `yaml:"motor_r_pwm_channel"`
+	MotorRDirChannel  int    `yaml:"motor_r_dir_channel"`
+	ServoMinUs        int    `yaml:"servo_min_us"`
+	ServoCenterUs     int    `yaml:"servo_center_us"`
+	ServoMaxUs        int    `yaml:"servo_max_us"`
 }
 
 type TelemetryConfig struct {
@@ -127,6 +133,27 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Hardware.CameraDevice == "" {
 		c.Hardware.CameraDevice = "/dev/video0"
+	}
+	if c.Hardware.PCA9685Addr == 0 {
+		c.Hardware.PCA9685Addr = 0x40
+	}
+	if c.Hardware.PCA9685FreqHz == 0 {
+		c.Hardware.PCA9685FreqHz = 50
+	}
+	if c.Hardware.MotorLPWMChannel == 0 {
+		c.Hardware.MotorLPWMChannel = 1
+		c.Hardware.MotorLDirChannel = 2
+		c.Hardware.MotorRPWMChannel = 3
+		c.Hardware.MotorRDirChannel = 4
+	}
+	if c.Hardware.ServoMinUs == 0 {
+		c.Hardware.ServoMinUs = 1000
+	}
+	if c.Hardware.ServoCenterUs == 0 {
+		c.Hardware.ServoCenterUs = 1500
+	}
+	if c.Hardware.ServoMaxUs == 0 {
+		c.Hardware.ServoMaxUs = 2000
 	}
 	if c.Telemetry.IntervalSec == 0 {
 		c.Telemetry.IntervalSec = 1
