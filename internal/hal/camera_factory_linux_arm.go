@@ -12,7 +12,7 @@ import (
 func newHardwareCamera(cfg *config.Config) (Camera, error) {
 	backend := cfg.Hardware.CameraBackend
 	if backend == "" {
-		backend = "auto"
+		backend = "rpicam"
 	}
 
 	switch backend {

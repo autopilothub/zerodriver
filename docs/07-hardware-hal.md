@@ -46,7 +46,7 @@ sudo raspi-config  # Interface Options → Camera → Enable
 rpicam-hello --list-cameras  # OV5647 등 확인
 
 # Bookworm+ 에서 /dev/video0 은 raw unicam 노드라 V4L2 직접 스트리밍이 실패할 수 있음.
-# zerodriver 는 camera_backend: auto 로 rpicam-vid 에 자동 폴백한다.
+# 기본 camera_backend: rpicam (rpicam-vid 파이프).
 sudo apt install -y rpicam-apps
 ```
 

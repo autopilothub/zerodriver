@@ -55,7 +55,7 @@ type HardwareConfig struct {
 	LidarPort         string `yaml:"lidar_port"`
 	LidarBaud         int    `yaml:"lidar_baud"`
 	CameraDevice      string `yaml:"camera_device"`
-	CameraBackend     string `yaml:"camera_backend"` // auto, v4l2, rpicam
+	CameraBackend     string `yaml:"camera_backend"` // rpicam (default), v4l2, auto
 	PCA9685Addr       int `yaml:"pca9685_addr"`
 	PCA9685FreqHz     int `yaml:"pca9685_freq_hz"`
 	SteeringChannel   int `yaml:"steering_channel"`
@@ -142,6 +142,9 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Hardware.LidarBaud == 0 {
 		c.Hardware.LidarBaud = 115200
+	}
+	if c.Hardware.CameraBackend == "" {
+		c.Hardware.CameraBackend = "rpicam"
 	}
 	if c.Hardware.CameraDevice == "" {
 		c.Hardware.CameraDevice = "/dev/video0"

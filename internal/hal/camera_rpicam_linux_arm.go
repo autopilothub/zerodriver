@@ -75,9 +75,6 @@ func startRpicamCamera(bin string, outW, outH, captureW, captureH int, codec str
 		"--flush",
 		"-o", "-",
 	}
-	if captureW == 640 && captureH == 480 {
-		args = append(args, "--mode", "640:480:10")
-	}
 
 	cmd := exec.Command(bin, args...)
 	stdout, err := cmd.StdoutPipe()
