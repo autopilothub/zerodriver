@@ -4,7 +4,6 @@ package hal
 
 import (
 	"fmt"
-	"math"
 	"sync"
 	"time"
 
@@ -106,8 +105,7 @@ func (m *MPU9250) Read() (domain.Attitude, error) {
 	gyroZ := float64(gz) / mpuGyroScale
 	m.yaw += gyroZ * dt
 
-	roll := math.Atan2(float64(ay), float64(az)) * 180 / math.Pi
-	pitch := math.Atan2(-float64(ax), math.Sqrt(float64(ay*ay+az*az))) * 180 / math.Pi
+	pitch, roll := computeTiltFromAccel(ax, ay, az)
 
 	return domain.Attitude{
 		Yaw:   m.yaw,

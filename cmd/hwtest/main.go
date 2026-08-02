@@ -61,13 +61,18 @@ func main() {
 }
 
 func testIMU(cfg *config.Config) bool {
-	fmt.Println("\n--- IMU (MPU-6500/9250) ---")
 	imu, err := hal.NewIMU(cfg)
 	if err != nil {
-		fmt.Printf("FAIL init: %v\n", err)
+		fmt.Printf("\n--- IMU ---\nFAIL init: %v\n", err)
 		return false
 	}
 	defer imu.Close()
+
+	chip := "IMU"
+	if named, ok := imu.(interface{ ChipName() string }); ok {
+		chip = named.ChipName()
+	}
+	fmt.Printf("\n--- IMU (%s) ---\n", chip)
 
 	for i := 0; i < 5; i++ {
 		att, err := imu.Read()
