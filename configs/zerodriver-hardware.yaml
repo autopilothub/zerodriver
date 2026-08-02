@@ -1,0 +1,41 @@
+mode: hardware
+
+control:
+  loop_hz: 50
+  base_speed: 0.6
+  corner_speed: 0.3
+  corner_threshold: 0.5
+
+pid:
+  steering:
+    kp: 0.8
+    ki: 0.01
+    kd: 0.05
+
+obstacle:
+  stop_distance_cm: 20
+  scan_front_angle: 60
+
+camera:
+  width: 320
+  height: 240
+  roi_y: 160
+
+hardware:
+  i2c_bus: "/dev/i2c-1"
+  i2c_addr: 0x68
+  lidar_model: rplidar_a1
+  lidar_port: "/dev/ttyUSB0"
+  lidar_baud: 115200
+  camera_device: "/dev/video0"
+  motor_l_pwm: 12
+  motor_l_dir: 16
+  motor_r_pwm: 13
+  motor_r_dir: 17
+
+telemetry:
+  enabled: false
+  endpoint: ""
+  topic: zerodriver/telemetry
+  interval_sec: 1
+  cert_dir: /etc/zerodriver/certs

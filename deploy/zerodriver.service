@@ -1,0 +1,15 @@
+[Unit]
+Description=ZeroDriver Line Tracer RC Car
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+ExecStart=/home/pi/zerodriver-armv6 -config /home/pi/zerodriver-hardware.yaml -mode hardware
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
