@@ -11,6 +11,7 @@ Pi Zero W 실제 하드웨어 드라이버. `linux && arm` 빌드 태그로만 �
 | `pca9685_linux_arm.go` | PCA9685 PWM | I2C (`0x40`, 50Hz) |
 | `pca9685_motor_linux_arm.go` | 서보 + ESC | CH0=조향, CH1=스로틀 |
 | `camera_linux_arm.go` | Pi Camera | V4L2 (`/dev/video0`) |
+| `camera_rpicam_linux_arm.go` | Pi Camera | rpicam-vid (libcamera) |
 
 ## Mock vs Hardware
 
@@ -42,10 +43,11 @@ sudo raspi-config  # Serial → No login shell, Serial enabled
 
 # 카메라
 sudo raspi-config  # Interface Options → Camera → Enable
-libcamera-hello  # 또는 rpicam-hello
+rpicam-hello --list-cameras  # OV5647 등 확인
 
-# V4L2 호환 확인
-ls /dev/video0
+# Bookworm+ 에서 /dev/video0 은 raw unicam 노드라 V4L2 직접 스트리밍이 실패할 수 있음.
+# zerodriver 는 camera_backend: auto 로 rpicam-vid 에 자동 폴백한다.
+sudo apt install -y rpicam-apps
 ```
 
 ## MPU-9250

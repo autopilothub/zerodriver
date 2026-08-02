@@ -102,7 +102,8 @@ pid:
 |------|------|------|
 | IMU FAIL | `i2cdetect -y 1` | `0x68` 확인 (0x70은 PCA9685 All Call) |
 | LiDAR FAIL | `ls /dev/ttyUSB0` | USB 연결, dialout 그룹 |
-| Camera FAIL | `libcamera-hello` | CSI 케이블, camera enable |
+| Camera FAIL | `rpicam-hello --list-cameras` | CSI 케이블, `sudo apt install rpicam-apps` |
+| `start streaming: invalid argument` | V4L2 unicam 노드 | `camera_backend: auto` 또는 `rpicam` (기본값) |
 | line not detected | `camtest -save frame.ppm` | 조명, 라인 대비, ROI 조정 |
 | 탈선 | verbose 로그 확인 | Kp 감소, corner_speed 감소 |
 | AVOIDING 고착 | lidartest | 전방 오탐지, scan_front_angle 조정 |

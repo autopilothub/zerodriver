@@ -8,6 +8,11 @@ USER_NAME="${USER}"
 
 echo "=== ZeroDriver Pi Install ==="
 
+# Camera stack for OV5647 on Bookworm+ (rpicam-vid backend)
+if command -v apt-get >/dev/null; then
+  sudo apt-get install -y rpicam-apps libcamera-v4l2 v4l-utils 2>/dev/null || true
+fi
+
 # Groups for hardware access
 for grp in i2c dialout video; do
   if getent group "$grp" >/dev/null; then

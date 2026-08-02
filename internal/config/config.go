@@ -55,6 +55,7 @@ type HardwareConfig struct {
 	LidarPort         string `yaml:"lidar_port"`
 	LidarBaud         int    `yaml:"lidar_baud"`
 	CameraDevice      string `yaml:"camera_device"`
+	CameraBackend     string `yaml:"camera_backend"` // auto, v4l2, rpicam
 	PCA9685Addr       int `yaml:"pca9685_addr"`
 	PCA9685FreqHz     int `yaml:"pca9685_freq_hz"`
 	SteeringChannel   int `yaml:"steering_channel"`
