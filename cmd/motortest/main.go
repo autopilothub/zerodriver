@@ -1,4 +1,4 @@
-// Motor diagnostic tool. Spins wheels briefly for wiring verification.
+// RC car motor test: steering servo + throttle PWM.
 // Usage: ./motortest -confirm -speed 0.3 -duration 2s
 package main
 
@@ -17,13 +17,13 @@ import (
 func main() {
 	configPath := flag.String("config", "configs/zerodriver.yaml", "config file")
 	mode := flag.String("mode", "hardware", "mode: mock or hardware")
-	speed := flag.Float64("speed", 0.3, "motor speed 0.0-1.0")
+	speed := flag.Float64("speed", 0.3, "throttle 0.0-1.0")
 	confirm := flag.Bool("confirm", false, "confirm motor will spin (required for hardware)")
-	duration := flag.Duration("duration", 2*time.Second, "spin duration")
+	duration := flag.Duration("duration", 2*time.Second, "step duration")
 	flag.Parse()
 
 	if *mode == "hardware" && !*confirm {
-		log.Fatal("hardware mode requires -confirm flag (wheels will spin)")
+		log.Fatal("hardware mode requires -confirm flag")
 	}
 	if *speed < 0 || *speed > 1 {
 		log.Fatal("speed must be 0.0-1.0")
@@ -41,8 +41,8 @@ func main() {
 	}
 	defer motor.Close()
 
-	log.Printf("motor test: speed=%.2f duration=%s mode=%s", *speed, *duration, cfg.Mode)
-	log.Println("sequence: forward → stop → turn left → stop")
+	log.Printf("RC motor test: throttle=%.2f mode=%s", *speed, cfg.Mode)
+	log.Println("sequence: forward → stop → steer left → stop")
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -52,13 +52,13 @@ func main() {
 
 func runSequence(motor hal.Motor, speed float64, dur time.Duration, sigCh chan os.Signal) {
 	steps := []struct {
-		name  string
-		left  float64
-		right float64
+		name     string
+		steering float64
+		throttle float64
 	}{
-		{"forward", speed, speed},
+		{"forward", 0, speed},
 		{"stop", 0, 0},
-		{"turn left", -speed, speed},
+		{"steer left", -0.5, 0},
 		{"stop", 0, 0},
 	}
 
@@ -71,8 +71,8 @@ func runSequence(motor hal.Motor, speed float64, dur time.Duration, sigCh chan o
 		default:
 		}
 
-		log.Printf("→ %s (L=%.2f R=%.2f)", step.name, step.left, step.right)
-		if err := motor.Set(step.left, step.right); err != nil {
+		log.Printf("→ %s (steer=%.2f throttle=%.2f)", step.name, step.steering, step.throttle)
+		if err := motor.Drive(step.steering, step.throttle); err != nil {
 			log.Printf("motor error: %v", err)
 		}
 

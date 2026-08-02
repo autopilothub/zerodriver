@@ -6,7 +6,6 @@ const (
 	pca9685DefaultFreqHz   = 50
 	pca9685OscClockHz      = 25_000_000
 	pca9685Steps           = 4096
-	pca9685PeriodUs        = 1_000_000 / pca9685DefaultFreqHz // 20000µs @ 50Hz
 	pca9685DefaultMinUs    = 1000
 	pca9685DefaultCenterUs = 1500
 	pca9685DefaultMaxUs    = 2000
@@ -14,16 +13,15 @@ const (
 
 // PCA9685Config holds channel mapping and pulse ranges.
 type PCA9685Config struct {
-	Addr              int
-	FreqHz            int
-	SteeringChannel   int
-	MotorLPWMChannel  int
-	MotorLDirChannel  int
-	MotorRPWMChannel  int
-	MotorRDirChannel  int
-	ServoMinUs        int
-	ServoCenterUs     int
-	ServoMaxUs        int
+	Addr             int
+	FreqHz           int
+	SteeringChannel  int
+	ThrottleChannel  int
+	ServoMinUs       int
+	ServoCenterUs    int
+	ServoMaxUs       int
+	ThrottleMinUs    int
+	ThrottleMaxUs    int
 }
 
 func (c PCA9685Config) withDefaults() PCA9685Config {
@@ -42,6 +40,12 @@ func (c PCA9685Config) withDefaults() PCA9685Config {
 	}
 	if out.ServoMaxUs == 0 {
 		out.ServoMaxUs = pca9685DefaultMaxUs
+	}
+	if out.ThrottleMinUs == 0 {
+		out.ThrottleMinUs = pca9685DefaultMinUs
+	}
+	if out.ThrottleMaxUs == 0 {
+		out.ThrottleMaxUs = pca9685DefaultMaxUs
 	}
 	return out
 }
@@ -77,19 +81,6 @@ func PulseUsToTicks(pulseUs int, freqHz int) uint16 {
 	return uint16(math.Round(ticks))
 }
 
-// DutyToTicks converts a 0.0-1.0 duty cycle to OFF tick count (ON=0).
-func DutyToTicks(duty float64, freqHz int) uint16 {
-	if duty < 0 {
-		duty = 0
-	}
-	if duty > 1 {
-		duty = 1
-	}
-	periodUs := 1_000_000 / freqHz
-	pulseUs := int(float64(periodUs) * duty)
-	return PulseUsToTicks(pulseUs, freqHz)
-}
-
 // SteeringToPulseUs maps steering -1..+1 to servo pulse width.
 func SteeringToPulseUs(steering float64, minUs, centerUs, maxUs int) int {
 	if steering < -1 {
@@ -104,9 +95,13 @@ func SteeringToPulseUs(steering float64, minUs, centerUs, maxUs int) int {
 	return centerUs + int(float64(maxUs-centerUs)*steering)
 }
 
-// DriveInputs splits differential left/right commands into steering and throttle.
-func DriveInputs(left, right float64) (steering, throttle float64) {
-	throttle = (left + right) / 2
-	steering = (right - left) / 2
-	return steering, throttle
+// ThrottleToPulseUs maps throttle 0..1 to ESC pulse width.
+func ThrottleToPulseUs(throttle float64, minUs, maxUs int) int {
+	if throttle < 0 {
+		throttle = 0
+	}
+	if throttle > 1 {
+		throttle = 1
+	}
+	return minUs + int(float64(maxUs-minUs)*throttle)
 }

@@ -45,7 +45,7 @@ type Camera interface {
 }
 
 type Motor interface {
-    Set(left, right float64) error  // -1.0 ~ 1.0
+    Drive(steering, throttle float64) error  // steering: -1~+1, throttle: 0~1
     Stop() error
     Close() error
 }
@@ -93,7 +93,7 @@ main goroutine
 2. StateMachine.Update(obstacle) → state
 3. Fusion.Fuse(line, imu, lidar, state) → FusedInput
 4. PID.Compute(FusedInput) → ControlCommand
-5. Motor.Set(cmd)
+5. Motor.Drive(cmd.Steering, cmd.Throttle)
 ```
 
 ## PID 구조

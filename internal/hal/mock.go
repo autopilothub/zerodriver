@@ -99,31 +99,31 @@ func (m *MockCamera) Close() error { return nil }
 
 // MockMotor logs motor commands without driving hardware.
 type MockMotor struct {
-	mu    sync.Mutex
-	left  float64
-	right float64
+	mu        sync.Mutex
+	steering  float64
+	throttle  float64
 }
 
 func NewMockMotor() *MockMotor { return &MockMotor{} }
 
-func (m *MockMotor) Set(left, right float64) error {
+func (m *MockMotor) Drive(steering, throttle float64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.left = clamp(left, -1, 1)
-	m.right = clamp(right, -1, 1)
+	m.steering = clamp(steering, -1, 1)
+	m.throttle = clamp(throttle, 0, 1)
 	return nil
 }
 
 func (m *MockMotor) Stop() error {
-	return m.Set(0, 0)
+	return m.Drive(0, 0)
 }
 
 func (m *MockMotor) Close() error { return nil }
 
-func (m *MockMotor) LastCommand() (left, right float64) {
+func (m *MockMotor) LastCommand() (steering, throttle float64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.left, m.right
+	return m.steering, m.throttle
 }
 
 func clamp(v, min, max float64) float64 {

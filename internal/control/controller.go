@@ -64,9 +64,7 @@ func (c *Controller) State() domain.RaceState {
 }
 
 func (c *Controller) applyMotor(cmd domain.ControlCommand) {
-	left := cmd.Throttle - cmd.Steering*cmd.Throttle
-	right := cmd.Throttle + cmd.Steering*cmd.Throttle
-	c.motor.Set(left, right)
+	c.motor.Drive(cmd.Steering, cmd.Throttle)
 }
 
 func abs(v float64) float64 {

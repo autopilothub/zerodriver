@@ -151,13 +151,13 @@ func testMotor(cfg *config.Config, confirm bool) bool {
 	defer motor.Close()
 
 	fmt.Println("  forward 1s...")
-	motor.Set(0.3, 0.3)
+	motor.Drive(0, 0.3)
 	time.Sleep(1 * time.Second)
 	motor.Stop()
 	time.Sleep(300 * time.Millisecond)
 
-	fmt.Println("  turn left 1s...")
-	motor.Set(-0.3, 0.3)
+	fmt.Println("  steer left 1s...")
+	motor.Drive(-0.5, 0)
 	time.Sleep(1 * time.Second)
 	motor.Stop()
 

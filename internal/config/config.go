@@ -52,16 +52,15 @@ type HardwareConfig struct {
 	LidarPort         string `yaml:"lidar_port"`
 	LidarBaud         int    `yaml:"lidar_baud"`
 	CameraDevice      string `yaml:"camera_device"`
-	PCA9685Addr       int    `yaml:"pca9685_addr"`
-	PCA9685FreqHz     int    `yaml:"pca9685_freq_hz"`
-	SteeringChannel   int    `yaml:"steering_channel"`
-	MotorLPWMChannel  int    `yaml:"motor_l_pwm_channel"`
-	MotorLDirChannel  int    `yaml:"motor_l_dir_channel"`
-	MotorRPWMChannel  int    `yaml:"motor_r_pwm_channel"`
-	MotorRDirChannel  int    `yaml:"motor_r_dir_channel"`
-	ServoMinUs        int    `yaml:"servo_min_us"`
-	ServoCenterUs     int    `yaml:"servo_center_us"`
-	ServoMaxUs        int    `yaml:"servo_max_us"`
+	PCA9685Addr       int `yaml:"pca9685_addr"`
+	PCA9685FreqHz     int `yaml:"pca9685_freq_hz"`
+	SteeringChannel   int `yaml:"steering_channel"`
+	ThrottleChannel   int `yaml:"throttle_channel"`
+	ServoMinUs        int `yaml:"servo_min_us"`
+	ServoCenterUs     int `yaml:"servo_center_us"`
+	ServoMaxUs        int `yaml:"servo_max_us"`
+	ThrottleMinUs     int `yaml:"throttle_min_us"`
+	ThrottleMaxUs     int `yaml:"throttle_max_us"`
 }
 
 type TelemetryConfig struct {
@@ -140,11 +139,8 @@ func (c *Config) applyDefaults() {
 	if c.Hardware.PCA9685FreqHz == 0 {
 		c.Hardware.PCA9685FreqHz = 50
 	}
-	if c.Hardware.MotorLPWMChannel == 0 {
-		c.Hardware.MotorLPWMChannel = 1
-		c.Hardware.MotorLDirChannel = 2
-		c.Hardware.MotorRPWMChannel = 3
-		c.Hardware.MotorRDirChannel = 4
+	if c.Hardware.ThrottleChannel == 0 {
+		c.Hardware.ThrottleChannel = 1
 	}
 	if c.Hardware.ServoMinUs == 0 {
 		c.Hardware.ServoMinUs = 1000
@@ -154,6 +150,12 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Hardware.ServoMaxUs == 0 {
 		c.Hardware.ServoMaxUs = 2000
+	}
+	if c.Hardware.ThrottleMinUs == 0 {
+		c.Hardware.ThrottleMinUs = 1000
+	}
+	if c.Hardware.ThrottleMaxUs == 0 {
+		c.Hardware.ThrottleMaxUs = 2000
 	}
 	if c.Telemetry.IntervalSec == 0 {
 		c.Telemetry.IntervalSec = 1

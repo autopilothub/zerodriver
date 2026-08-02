@@ -31,13 +31,12 @@ hardware:
   pca9685_addr: 0x40
   pca9685_freq_hz: 50
   steering_channel: 0
-  motor_l_pwm_channel: 1
-  motor_l_dir_channel: 2
-  motor_r_pwm_channel: 3
-  motor_r_dir_channel: 4
+  throttle_channel: 1
   servo_min_us: 1000
   servo_center_us: 1500
   servo_max_us: 2000
+  throttle_min_us: 1000
+  throttle_max_us: 2000
 
 telemetry:
   enabled: false

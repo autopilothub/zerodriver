@@ -22,9 +22,9 @@ type Camera interface {
 	Close() error
 }
 
-// Motor controls left/right wheel speeds.
+// Motor controls steering servo and throttle (RC car).
 type Motor interface {
-	Set(left, right float64) error
+	Drive(steering, throttle float64) error
 	Stop() error
 	Close() error
 }

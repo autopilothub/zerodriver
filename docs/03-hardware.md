@@ -54,7 +54,7 @@ go build -o lidartest ./cmd/lidartest
 > Pi Zero W는 USB 포트가 1개(micro-USB OTG)이므로, LiDAR는 USB 허브 또는 OTG 어댑터로 연결한다.
 > GPIO UART(`/dev/serial0`) 대신 USB serial을 사용하면 WiFi/Bluetooth와 핀 충돌이 없다.
 
-### PCA9685 (서보 + 모터 PWM)
+### PCA9685 (서보 + ESC PWM)
 
 MPU-9250과 동일 I2C 버스(`/dev/i2c-1`)에 연결.
 
@@ -70,13 +70,11 @@ I2C 주소: `0x40` (기본)
 | 채널 | 용도 | 연결 |
 |------|------|------|
 | CH0 | 조향 서보 | 서보 신호선 |
-| CH1 | 모터 L PWM | DRV8833 AIN1 |
-| CH2 | 모터 L DIR | DRV8833 AIN2 |
-| CH3 | 모터 R PWM | DRV8833 BIN1 |
-| CH4 | 모터 R DIR | DRV8833 BIN2 |
+| CH1 | 스로틀 PWM | ESC 신호선 |
 
-- PWM 주파수: 50Hz (서보 호환)
-- 서보 펄스: 1000µs(좌) ~ 1500µs(중앙) ~ 2000µs(우)
+- PWM 주파수: 50Hz (서보/ESC 표준)
+- 서보: 1000µs(좌) ~ 1500µs(중앙) ~ 2000µs(우)
+- ESC: 1000µs(정지) ~ 2000µs(최대 속도)
 
 ```bash
 # I2C 확인

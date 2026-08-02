@@ -8,26 +8,25 @@ import (
 	"github.com/autopilothub/zerodriver/internal/config"
 )
 
-// PCA9685Motor drives a steering servo and dual DC motors via PCA9685.
+// PCA9685Motor drives a steering servo and ESC throttle via PCA9685 (2 channels).
 type PCA9685Motor struct {
-	mu   sync.Mutex
-	pwm  *PCA9685
-	cfg  PCA9685Config
+	mu  sync.Mutex
+	pwm *PCA9685
+	cfg PCA9685Config
 }
 
-// NewPCA9685Motor creates a motor driver using PCA9685 channels.
+// NewPCA9685Motor creates an RC car motor driver using PCA9685.
 func NewPCA9685Motor(i2cBus string, hw config.HardwareConfig) (*PCA9685Motor, error) {
 	cfg := PCA9685Config{
-		Addr:              hw.PCA9685Addr,
-		FreqHz:            hw.PCA9685FreqHz,
-		SteeringChannel:   hw.SteeringChannel,
-		MotorLPWMChannel:  hw.MotorLPWMChannel,
-		MotorLDirChannel:  hw.MotorLDirChannel,
-		MotorRPWMChannel:  hw.MotorRPWMChannel,
-		MotorRDirChannel:  hw.MotorRDirChannel,
-		ServoMinUs:        hw.ServoMinUs,
-		ServoCenterUs:     hw.ServoCenterUs,
-		ServoMaxUs:        hw.ServoMaxUs,
+		Addr:            hw.PCA9685Addr,
+		FreqHz:          hw.PCA9685FreqHz,
+		SteeringChannel: hw.SteeringChannel,
+		ThrottleChannel: hw.ThrottleChannel,
+		ServoMinUs:      hw.ServoMinUs,
+		ServoCenterUs:   hw.ServoCenterUs,
+		ServoMaxUs:      hw.ServoMaxUs,
+		ThrottleMinUs:   hw.ThrottleMinUs,
+		ThrottleMaxUs:   hw.ThrottleMaxUs,
 	}.withDefaults()
 
 	pwm, err := NewPCA9685(i2cBus, cfg.Addr, cfg.FreqHz)
@@ -40,37 +39,21 @@ func NewPCA9685Motor(i2cBus string, hw config.HardwareConfig) (*PCA9685Motor, er
 	return m, nil
 }
 
-func (m *PCA9685Motor) Set(left, right float64) error {
+func (m *PCA9685Motor) Drive(steering, throttle float64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	steering, _ := DriveInputs(left, right)
-	pulse := SteeringToPulseUs(steering, m.cfg.ServoMinUs, m.cfg.ServoCenterUs, m.cfg.ServoMaxUs)
-	if err := m.pwm.SetPulseUs(m.cfg.SteeringChannel, pulse); err != nil {
+	steerPulse := SteeringToPulseUs(steering, m.cfg.ServoMinUs, m.cfg.ServoCenterUs, m.cfg.ServoMaxUs)
+	if err := m.pwm.SetPulseUs(m.cfg.SteeringChannel, steerPulse); err != nil {
 		return err
 	}
 
-	if err := m.setMotorSide(m.cfg.MotorLPWMChannel, m.cfg.MotorLDirChannel, left); err != nil {
-		return err
-	}
-	return m.setMotorSide(m.cfg.MotorRPWMChannel, m.cfg.MotorRDirChannel, right)
-}
-
-func (m *PCA9685Motor) setMotorSide(pwmCh, dirCh int, speed float64) error {
-	if speed < 0 {
-		if err := m.pwm.SetDigital(dirCh, false); err != nil {
-			return err
-		}
-		return m.pwm.SetDuty(pwmCh, -speed)
-	}
-	if err := m.pwm.SetDigital(dirCh, true); err != nil {
-		return err
-	}
-	return m.pwm.SetDuty(pwmCh, speed)
+	throttlePulse := ThrottleToPulseUs(throttle, m.cfg.ThrottleMinUs, m.cfg.ThrottleMaxUs)
+	return m.pwm.SetPulseUs(m.cfg.ThrottleChannel, throttlePulse)
 }
 
 func (m *PCA9685Motor) Stop() error {
-	return m.Set(0, 0)
+	return m.Drive(0, 0)
 }
 
 func (m *PCA9685Motor) Close() error {

@@ -28,9 +28,15 @@ func TestSteeringToPulseUs(t *testing.T) {
 	}
 }
 
-func TestDriveInputs(t *testing.T) {
-	s, throttle := DriveInputs(0.4, 0.6)
-	if math.Abs(s-0.1) > 0.001 || math.Abs(throttle-0.5) > 0.001 {
-		t.Fatalf("got steering=%.2f throttle=%.2f", s, throttle)
+func TestThrottleToPulseUs(t *testing.T) {
+	if ThrottleToPulseUs(0, 1000, 2000) != 1000 {
+		t.Fatal("throttle 0 should be min")
+	}
+	if ThrottleToPulseUs(1, 1000, 2000) != 2000 {
+		t.Fatal("throttle 1 should be max")
+	}
+	got := ThrottleToPulseUs(0.5, 1000, 2000)
+	if math.Abs(float64(got-1500)) > 1 {
+		t.Fatalf("throttle 0.5: want 1500, got %d", got)
 	}
 }
