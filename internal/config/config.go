@@ -51,7 +51,7 @@ type CameraConfig struct {
 type HardwareConfig struct {
 	I2CBus            string `yaml:"i2c_bus"`
 	I2CAddr           int    `yaml:"i2c_addr"`
-	IMUModel          string `yaml:"imu_model"` // mpu9250 (default), mpu6500, auto
+	IMUModel          string `yaml:"imu_model"` // bno085, mpu9250, mpu6500, auto
 	LidarModel        string `yaml:"lidar_model"`
 	LidarPort         string `yaml:"lidar_port"`
 	LidarBaud         int    `yaml:"lidar_baud"`
@@ -129,11 +129,16 @@ func (c *Config) applyDefaults() {
 	if c.Camera.LineThreshold == 0 {
 		c.Camera.LineThreshold = 100
 	}
-	if c.Hardware.I2CAddr == 0 {
-		c.Hardware.I2CAddr = 0x68
-	}
 	if c.Hardware.IMUModel == "" {
-		c.Hardware.IMUModel = "mpu9250"
+		c.Hardware.IMUModel = "bno085"
+	}
+	if c.Hardware.I2CAddr == 0 {
+		switch c.Hardware.IMUModel {
+		case "bno085", "bno08x", "bno080":
+			c.Hardware.I2CAddr = 0x4B
+		default:
+			c.Hardware.I2CAddr = 0x68
+		}
 	}
 	if c.Hardware.I2CBus == "" {
 		c.Hardware.I2CBus = "/dev/i2c-1"

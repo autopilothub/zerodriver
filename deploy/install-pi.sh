@@ -53,7 +53,7 @@ fi
 
 echo ""
 echo "=== Verify ==="
-echo "  i2cdetect -y 1        # 0x40=PCA9685, 0x68=IMU, 0x70=PCA9685 All Call"
+echo "  i2cdetect -y 1        # 0x4b=BNO085, 0x40=PCA9685, 0x70=PCA9685 All Call"
 echo "  ls /dev/ttyUSB0       # RPLidar A1"
 echo "  ./deploy/verify-pi.sh configs/zerodriver-hardware.yaml"
 echo "  $INSTALL_DIR/hwtest -config $INSTALL_DIR/zerodriver.yaml"

@@ -6,7 +6,8 @@ Pi Zero W 실제 하드웨어 드라이버. `linux && arm` 빌드 태그로만 �
 
 | 파일 | 장치 | 인터페이스 |
 |------|------|-----------|
-| `mpu9250_linux_arm.go` | MPU-9250 IMU | I2C (`/dev/i2c-1`, 0x68) |
+| `mpu9250_linux_arm.go` | MPU-9250 IMU | I2C (`0x68`) |
+| `bno085_linux_arm.go` | BNO085 IMU | I2C (`0x4A`/`0x4B`, SHTP) |
 | `rplidar_linux_arm.go` | RPLidar A1 | USB Serial (`/dev/ttyUSB0`, 115200) |
 | `pca9685_linux_arm.go` | PCA9685 PWM | I2C (`0x40`, 50Hz) |
 | `pca9685_motor_linux_arm.go` | 서보 + ESC | CH0=조향, CH1=스로틀 |
@@ -49,6 +50,12 @@ rpicam-hello --list-cameras  # OV5647 등 확인
 # 기본 camera_backend: rpicam (rpicam-vid 파이프).
 sudo apt install -y rpicam-apps
 ```
+
+## BNO085 (기본)
+
+- I2C `0x4B` (또는 `0x4A`), `imu_model: bno085`
+- CEVA SHTP 프로토콜 — fusion 엔진이 `yaw`/`pitch`/`roll`/`heading`/`mag` 제공
+- `github.com/BoltyTheDog/go-bno08x` 드라이버 사용
 
 ## MPU-9250 / MPU-6500
 

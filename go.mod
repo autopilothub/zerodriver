@@ -3,6 +3,7 @@ module github.com/autopilothub/zerodriver
 go 1.25.0
 
 require (
+	github.com/BoltyTheDog/go-bno08x v0.0.0-20260323103235-a6512c4e9dd4
 	github.com/blackjack/webcam v0.6.1
 	github.com/eclipse/paho.mqtt.golang v1.5.1
 	go.bug.st/serial v1.6.4

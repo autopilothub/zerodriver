@@ -38,7 +38,7 @@ chmod +x deploy/verify-pi.sh
 
 예상 출력:
 ```
---- IMU (MPU-6500/9250) ---
+--- IMU (BNO085) ---
   yaw=0.1° pitch=2.0° roll=-1.0° gyroZ=0.5°/s
 PASS
 
@@ -107,8 +107,8 @@ pid:
 
 | 증상 | 확인 | 해결 |
 |------|------|------|
-| IMU FAIL | `i2cdetect -y 1` | `0x68` 확인; MPU-9250이면 bypass 후 `0x0C` |
-| WHO_AM_I=0x70 | 정상 (MPU-9250 코어) | `imu_model: mpu9250`, imutest에서 compass 확인 |
+| IMU FAIL | `i2cdetect -y 1` | BNO085: `0x4b`; MPU: `0x68` |
+| BNO085 init fail | `imu_model: bno085`, `i2c_addr: 0x4b` | 배선, 3.3V, 재부팅 후 재시도 |
 | LiDAR FAIL | `ls /dev/ttyUSB0` | USB 연결, dialout 그룹 |
 | Camera FAIL | `rpicam-hello --list-cameras` | CSI 케이블, `sudo apt install rpicam-apps` |
 | `start streaming: invalid argument` | V4L2 unicam 노드 | `camera_backend: rpicam` (기본값) |

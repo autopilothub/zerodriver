@@ -26,8 +26,8 @@ camera:
 
 hardware:
   i2c_bus: "/dev/i2c-1"
-  i2c_addr: 0x68
-  imu_model: mpu9250
+  i2c_addr: 0x4b
+  imu_model: bno085
   lidar_model: rplidar_a1
   lidar_port: "/dev/ttyUSB0"
   lidar_baud: 115200

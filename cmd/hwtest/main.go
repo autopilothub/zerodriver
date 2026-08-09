@@ -76,7 +76,7 @@ func testIMU(cfg *config.Config) bool {
 	if who, ok := imu.(interface{ WhoAmI() byte }); ok {
 		fmt.Printf("  WHO_AM_I=0x%02X (%s)", who.WhoAmI(), hal.MPUCoreName(who.WhoAmI()))
 		if mag, ok := imu.(interface{ HasMagnetometer() bool }); ok && mag.HasMagnetometer() {
-			fmt.Print(" compass=AK8963")
+			fmt.Print(" compass=active")
 		}
 		fmt.Println()
 	}

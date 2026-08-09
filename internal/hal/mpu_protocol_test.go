@@ -30,6 +30,9 @@ func TestNormalizeIMUModel(t *testing.T) {
 	if NormalizeIMUModel("9250") != IMUModelMPU9250 {
 		t.Fatal("9250 alias")
 	}
+	if NormalizeIMUModel("bno085") != IMUModelBNO085 {
+		t.Fatal("bno085 alias")
+	}
 	if ShouldProbeMagnetometer(IMUModelMPU6500) {
 		t.Fatal("6500 should not probe mag")
 	}

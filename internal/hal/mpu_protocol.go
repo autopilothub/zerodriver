@@ -65,9 +65,10 @@ const (
 	IMUModelAuto    = "auto"
 	IMUModelMPU6500 = "mpu6500"
 	IMUModelMPU9250 = "mpu9250"
+	IMUModelBNO085  = "bno085"
 )
 
-// NormalizeIMUModel normalizes config imu_model to auto/mpu6500/mpu9250.
+// NormalizeIMUModel normalizes config imu_model.
 func NormalizeIMUModel(model string) string {
 	switch model {
 	case "", "auto":
@@ -76,6 +77,8 @@ func NormalizeIMUModel(model string) string {
 		return IMUModelMPU6500
 	case IMUModelMPU9250, "9250":
 		return IMUModelMPU9250
+	case IMUModelBNO085, "bno08x", "bno080":
+		return IMUModelBNO085
 	default:
 		return model
 	}

@@ -1,3 +1,5 @@
+github.com/BoltyTheDog/go-bno08x v0.0.0-20260323103235-a6512c4e9dd4 h1:ZUiBM4BLs9GULsDvAd7g8JZs65dQdQUXtLikV+l2xNM=
+github.com/BoltyTheDog/go-bno08x v0.0.0-20260323103235-a6512c4e9dd4/go.mod h1:26s9pe3zbhtM9yWJfHFuPZxEuj/7Mwjj7TwOdlU/2XM=
 github.com/blackjack/webcam v0.6.1 h1:K0T6Q0zto23U99gNAa5q/hFoye6uGcKr2aE6hFoxVoE=
 github.com/blackjack/webcam v0.6.1/go.mod h1:zs+RkUZzqpFPHPiwBZ6U5B34ZXXe9i+SiHLKnnukJuI=
 github.com/creack/goselect v0.1.2 h1:2DNy14+JPjRBgPzAd1thbQp4BSIihxcBf0IXhQXDRa0=

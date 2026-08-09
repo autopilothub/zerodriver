@@ -5,7 +5,7 @@
 | 부품 | 모델 (권장) | 수량 | 비고 |
 |------|------------|------|------|
 | SBC | Raspberry Pi Zero W | 1 | WiFi 내장 |
-| IMU | MPU-9250 / MPU-6500 breakout | 1 | I2C, 6~9-DOF |
+| IMU | BNO085 / MPU-9250 breakout | 1 | I2C 9-DOF |
 | 카메라 | Pi Camera Module v2 / HQ | 1 | CSI 커넥터 |
 | LiDAR | Slamtec RPLidar A1 | 1 | USB serial, 5V |
 | 모터 드라이버 | DRV8833 / L298N | 1 | 2채널 DC |
@@ -16,7 +16,7 @@
 
 ## 핀맵 (Raspberry Pi Zero W)
 
-### MPU-9250 / MPU-6500 (I2C)
+### BNO085 / MPU-9250 (I2C)
 
 | IMU | Pi Zero W | GPIO (BCM) |
 |-----|-----------|------------|
@@ -25,7 +25,21 @@
 | SDA | Pin 3 | GPIO2 |
 | SCL | Pin 5 | GPIO3 |
 
-I2C 주소: `0x68` (AD0=LOW) 또는 `0x69` (AD0=HIGH)
+**BNO085** (권장, 9축 fusion):
+
+| 항목 | 값 |
+|------|-----|
+| I2C 주소 | `0x4B` (SA0=HIGH) 또는 `0x4A` (SA0=LOW) |
+| 프로토콜 | SHTP (레지스터 방식 아님) |
+| 설정 | `imu_model: bno085`, `i2c_addr: 0x4b` |
+
+```bash
+sudo i2cdetect -y 1   # 0x4b 확인
+./bin/imutest-armv6 -config configs/zerodriver-hardware.yaml -duration 5s
+# heading=...° mag=(...)µT
+```
+
+**MPU-9250** (6축 코어 + AK8963):
 
 지원 칩 — 레지스터 `0x75` WHO_AM_I (I2C 주소 `0x68`에서 읽음):
 
@@ -50,8 +64,8 @@ sudo i2cdetect -y 1
 
 ```yaml
 hardware:
-  i2c_addr: 0x68
-  imu_model: mpu9250   # mpu9250 | mpu6500 | auto
+  i2c_addr: 0x4b      # BNO085
+  imu_model: bno085   # bno085 | mpu9250 | mpu6500 | auto
 ```
 
 ### RPLidar A1 (USB Serial)
@@ -99,7 +113,8 @@ PCA9685는 **All Call 주소 `0x70`** 도 응답한다. `i2cdetect`에 `0x70`이
 | i2cdetect | 장치 | 비고 |
 |-----------|------|------|
 | `0x40` | PCA9685 | 실제 제어 주소 |
-| `0x68` | MPU-6500/9250 | IMU |
+| `0x4b` / `0x4a` | BNO085 | 9축 IMU (SHTP) |
+| `0x68` | MPU-6500/9250 | 6축 코어 |
 | `0x70` | PCA9685 All Call | 브로드캐스트용, 무시 가능 |
 
 | 채널 | 용도 | 연결 |

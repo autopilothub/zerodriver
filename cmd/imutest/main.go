@@ -1,4 +1,4 @@
-// IMU diagnostic tool for MPU-9250 / MPU-6500.
+// IMU diagnostic tool (BNO085 / MPU-9250 / MPU-6500).
 // Usage: go run ./cmd/imutest -config configs/zerodriver-hardware.yaml -duration 5s
 package main
 
@@ -43,9 +43,9 @@ func main() {
 	}
 	if mag, ok := imu.(interface{ HasMagnetometer() bool }); ok {
 		if mag.HasMagnetometer() {
-			log.Printf("compass: AK8963 active")
+			log.Printf("compass: active (9-axis)")
 		} else {
-			log.Printf("compass: not available (6-axis IMU or AK8963 not detected)")
+			log.Printf("compass: not available")
 		}
 	}
 
