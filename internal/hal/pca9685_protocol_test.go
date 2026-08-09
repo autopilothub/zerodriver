@@ -38,14 +38,14 @@ func TestApplySteeringTrimInvert(t *testing.T) {
 }
 
 func TestThrottleToPulseUs(t *testing.T) {
-	if ThrottleToPulseUs(0, 1000, 2000) != 1000 {
-		t.Fatal("throttle 0 should be min")
+	if ThrottleToPulseUs(0, 1500, 2000) != 1500 {
+		t.Fatal("throttle 0 should be neutral")
 	}
-	if ThrottleToPulseUs(1, 1000, 2000) != 2000 {
+	if ThrottleToPulseUs(1, 1500, 2000) != 2000 {
 		t.Fatal("throttle 1 should be max")
 	}
-	got := ThrottleToPulseUs(0.5, 1000, 2000)
-	if math.Abs(float64(got-1500)) > 1 {
-		t.Fatalf("throttle 0.5: want 1500, got %d", got)
+	got := ThrottleToPulseUs(0.5, 1500, 2000)
+	if math.Abs(float64(got-1750)) > 1 {
+		t.Fatalf("throttle 0.5: want 1750, got %d", got)
 	}
 }

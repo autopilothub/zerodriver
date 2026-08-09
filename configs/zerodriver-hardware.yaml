@@ -52,8 +52,8 @@ hardware:
   servo_max_us: 2000
   servo_trim_us: 0        # 바퀴가 왼쪽 → 50~100씩 올려서 직진 맞춤
   steering_invert: false  # 자동주행 시 반대로 꺾이면 true
-  throttle_min_us: 1000
-  throttle_max_us: 2000
+  throttle_min_us: 1500   # ESC 정지(중립). 1000~2000 타입이면 1000
+  throttle_max_us: 2000   # 최대 전진
 
 telemetry:
   enabled: false

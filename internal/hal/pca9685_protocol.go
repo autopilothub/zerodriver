@@ -7,9 +7,10 @@ const (
 	pca9685OscClockHz      = 25_000_000
 	pca9685Steps           = 4096
 	pca9685AddrAllCall     = 0x70 // PCA9685 broadcast address (shows on i2cdetect)
-	pca9685DefaultMinUs    = 1000
-	pca9685DefaultCenterUs = 1500
-	pca9685DefaultMaxUs    = 2000
+	pca9685DefaultMinUs       = 1000
+	pca9685DefaultCenterUs    = 1500
+	pca9685DefaultMaxUs       = 2000
+	pca9685DefaultThrottleNeutralUs = 1500 // car ESC stop/neutral
 )
 
 // PCA9685Config holds channel mapping and pulse ranges.
@@ -45,7 +46,7 @@ func (c PCA9685Config) withDefaults() PCA9685Config {
 		out.ServoMaxUs = pca9685DefaultMaxUs
 	}
 	if out.ThrottleMinUs == 0 {
-		out.ThrottleMinUs = pca9685DefaultMinUs
+		out.ThrottleMinUs = pca9685DefaultThrottleNeutralUs
 	}
 	if out.ThrottleMaxUs == 0 {
 		out.ThrottleMaxUs = pca9685DefaultMaxUs
@@ -113,13 +114,13 @@ func ApplySteering(steering float64, minUs, centerUs, maxUs, trimUs int, invert 
 	return pulse
 }
 
-// ThrottleToPulseUs maps throttle 0..1 to ESC pulse width.
-func ThrottleToPulseUs(throttle float64, minUs, maxUs int) int {
+// ThrottleToPulseUs maps throttle 0..1 to ESC pulse width (0=neutral/stop, 1=max forward).
+func ThrottleToPulseUs(throttle float64, neutralUs, maxUs int) int {
 	if throttle < 0 {
 		throttle = 0
 	}
 	if throttle > 1 {
 		throttle = 1
 	}
-	return minUs + int(float64(maxUs-minUs)*throttle)
+	return neutralUs + int(float64(maxUs-neutralUs)*throttle)
 }

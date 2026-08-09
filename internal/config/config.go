@@ -83,8 +83,8 @@ type HardwareConfig struct {
 	ServoMaxUs        int  `yaml:"servo_max_us"`
 	ServoTrimUs       int  `yaml:"servo_trim_us"`       // µs offset at center (wheels left → increase)
 	SteeringInvert    bool `yaml:"steering_invert"`     // flip left/right if servo wired backwards
-	ThrottleMinUs     int  `yaml:"throttle_min_us"`
-	ThrottleMaxUs     int  `yaml:"throttle_max_us"`
+	ThrottleMinUs     int  `yaml:"throttle_min_us"`     // ESC neutral/stop µs (car ESC: 1500)
+	ThrottleMaxUs     int  `yaml:"throttle_max_us"`     // max forward µs
 }
 
 type TelemetryConfig struct {
@@ -249,7 +249,7 @@ func (c *Config) applyDefaults() {
 		c.Hardware.ServoMaxUs = 2000
 	}
 	if c.Hardware.ThrottleMinUs == 0 {
-		c.Hardware.ThrottleMinUs = 1000
+		c.Hardware.ThrottleMinUs = 1500 // ESC neutral/stop
 	}
 	if c.Hardware.ThrottleMaxUs == 0 {
 		c.Hardware.ThrottleMaxUs = 2000

@@ -51,7 +51,7 @@ hardware:
   servo_max_us: 2000
   servo_trim_us: 0
   steering_invert: false
-  throttle_min_us: 1000
+  throttle_min_us: 1500
   throttle_max_us: 2000
 
 telemetry:
