@@ -30,6 +30,10 @@ type Status struct {
 	LidarErrors     uint64    `json:"lidar_errors"`
 	UptimeSec       float64   `json:"uptime_sec"`
 	Timestamp       time.Time `json:"timestamp"`
+	CalibrationState string   `json:"calibration_state"`
+	CalibrationPhase string   `json:"calibration_phase,omitempty"`
+	CalibrationError string   `json:"calibration_error,omitempty"`
+	CalibrationResult *CalibrationResultJSON `json:"calibration_result,omitempty"`
 }
 
 // UpdateInput bundles sensor readings for a status refresh.
@@ -56,6 +60,11 @@ type Store struct {
 	manualSteer    float64
 	manualThrottle float64
 	manualLastCmd  time.Time
+	calHooks       CalibrationHooks
+	calState       CalibrationState
+	calPhase       string
+	calError       string
+	calResult      *CalibrationResultJSON
 }
 
 func NewStore() *Store {
@@ -104,6 +113,11 @@ func (s *Store) Update(in UpdateInput) {
 		UptimeSec:       uptime,
 		Timestamp:       time.Now(),
 	}
+	cal := s.calibrationStatusLocked()
+	s.status.CalibrationState = string(cal.State)
+	s.status.CalibrationPhase = cal.Phase
+	s.status.CalibrationError = cal.Error
+	s.status.CalibrationResult = cal.Result
 }
 
 func (s *Store) Status() Status {

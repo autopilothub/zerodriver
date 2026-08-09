@@ -84,6 +84,13 @@ func main() {
 	var statusStore *web.Store
 	if cfg.Web.Enabled {
 		statusStore = web.NewStore()
+		statusStore.SetCalibrationHooks(web.CalibrationHooks{
+			Drive:                  devices.Motor.Drive,
+			ReadIMU:                devices.IMU.Read,
+			Stop:                   devices.Motor.Stop,
+			ServoTrimUs:            cfg.Hardware.ServoTrimUs,
+			ThrottleForwardStartUs: cfg.Hardware.ThrottleForwardStartUs,
+		})
 		webSrv := web.NewServer(&cfg.Web, statusStore)
 		go func() {
 			log.Printf("web dashboard http://localhost%s", cfg.Web.Addr)
@@ -186,6 +193,22 @@ func main() {
 
 		case <-ticker.C:
 			fused := fuser.Fuse(lastLine, lastAtt, lastObs, ctrl.State())
+
+			if statusStore != nil && statusStore.IsCalibrating() {
+				lastCmd = domain.ControlCommand{}
+				statusStore.Update(web.UpdateInput{
+					Mode:        cfg.Mode,
+					State:       ctrl.State(),
+					Fused:       fused,
+					Command:     lastCmd,
+					Attitude:    lastAtt,
+					CamErrors:   camErrors.Load(),
+					IMUErrors:   imuErrors.Load(),
+					LidarErrors: lidarErrors.Load(),
+					StartedAt:   startedAt,
+				})
+				break
+			}
 
 			manualTimeout := time.Duration(cfg.Web.ManualTimeoutMS) * time.Millisecond
 			if statusStore != nil {

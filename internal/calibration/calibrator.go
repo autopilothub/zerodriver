@@ -32,6 +32,7 @@ type Options struct {
 	StraightDuration time.Duration
 	ThrottleDuration time.Duration
 	MinForwardAccel  float64 // m/s² on body X
+	OnPhase          func(phase string)
 }
 
 func (o Options) withDefaults() Options {
@@ -75,6 +76,7 @@ func Run(drive DriveFunc, read ReadIMU, currentTrimUs, currentForwardStartUs int
 	if err := drive(0, 0); err != nil {
 		return res, err
 	}
+	phase(opts, "prepare")
 	time.Sleep(500 * time.Millisecond)
 
 	heading0, err := avgHeading(read, opts.SampleInterval, 10)
@@ -82,10 +84,12 @@ func Run(drive DriveFunc, read ReadIMU, currentTrimUs, currentForwardStartUs int
 		return res, fmt.Errorf("imu heading: %w", err)
 	}
 
+	phase(opts, "steer_left")
 	leftGyro, err := avgGyroDuring(drive, read, -opts.SteerTest, 0, opts)
 	if err != nil {
 		return res, err
 	}
+	phase(opts, "steer_right")
 	rightGyro, err := avgGyroDuring(drive, read, opts.SteerTest, 0, opts)
 	if err != nil {
 		return res, err
@@ -103,6 +107,7 @@ func Run(drive DriveFunc, read ReadIMU, currentTrimUs, currentForwardStartUs int
 		res.Notes = append(res.Notes, fmt.Sprintf("steer OK (left %.1f°/s, right %.1f°/s)", leftGyro, rightGyro))
 	}
 
+	phase(opts, "straight")
 	if err := drive(0, opts.ForwardThrottle); err != nil {
 		return res, err
 	}
@@ -121,9 +126,12 @@ func Run(drive DriveFunc, read ReadIMU, currentTrimUs, currentForwardStartUs int
 		res.Notes = append(res.Notes, fmt.Sprintf("straight drift %.1f° (trim OK)", drift))
 	}
 
+	phase(opts, "forward")
 	fwdAccel, hasFwd := avgAccelDuring(drive, read, 0, opts.ForwardThrottle, opts)
+	phase(opts, "reverse")
 	revAccel, hasRev := avgAccelDuring(drive, read, 0, opts.ReverseThrottle, opts)
 	_ = drive(0, 0)
+	phase(opts, "done")
 
 	if hasFwd && fwdAccel < opts.MinForwardAccel {
 		start := currentForwardStartUs
@@ -251,4 +259,10 @@ func abs(v float64) float64 {
 		return -v
 	}
 	return v
+}
+
+func phase(opts Options, name string) {
+	if opts.OnPhase != nil {
+		opts.OnPhase(name)
+	}
 }

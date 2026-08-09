@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -34,6 +35,7 @@ func NewServer(cfg *config.WebConfig, store *Store) *Server {
 	mux.HandleFunc("/api/mode", s.handleMode)
 	mux.HandleFunc("/api/drive", s.handleDrive)
 	mux.HandleFunc("/api/stop", s.handleStop)
+	mux.HandleFunc("/api/calibrate", s.handleCalibrate)
 
 	s.srv = &http.Server{
 		Addr:              cfg.Addr,
@@ -125,6 +127,10 @@ func (s *Server) handleMode(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if s.store.IsCalibrating() {
+		http.Error(w, errCalibrating.Error(), http.StatusConflict)
+		return
+	}
 	var body struct {
 		DriveMode string `json:"drive_mode"`
 	}
@@ -139,6 +145,10 @@ func (s *Server) handleMode(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDrive(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if s.store.IsCalibrating() {
+		http.Error(w, errCalibrating.Error(), http.StatusConflict)
 		return
 	}
 	var body struct {
@@ -164,8 +174,51 @@ func (s *Server) handleStop(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if s.store.IsCalibrating() {
+		http.Error(w, errCalibrating.Error(), http.StatusConflict)
+		return
+	}
 	s.store.StopManual()
 	writeJSON(w, map[string]string{"status": "stopped"})
+}
+
+func (s *Server) handleCalibrate(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		state, phase, errMsg, result := s.store.calibrationSnapshot()
+		writeJSON(w, map[string]any{
+			"state":  state,
+			"phase":  phase,
+			"error":  errMsg,
+			"result": result,
+		})
+	case http.MethodPost:
+		var body struct {
+			Confirm bool `json:"confirm"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "bad json", http.StatusBadRequest)
+			return
+		}
+		if !body.Confirm {
+			http.Error(w, "confirm required", http.StatusBadRequest)
+			return
+		}
+		if err := s.store.StartCalibration(); err != nil {
+			if errors.Is(err, errCalibrationRunning) || errors.Is(err, errCalibrationUnavailable) {
+				http.Error(w, err.Error(), http.StatusConflict)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, map[string]string{"state": string(CalibrationRunning)})
+	case http.MethodDelete:
+		s.store.ResetCalibration()
+		writeJSON(w, map[string]string{"state": string(CalibrationIdle)})
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

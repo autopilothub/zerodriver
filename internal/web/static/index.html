@@ -217,6 +217,35 @@
       cursor: pointer;
     }
     .hint { font-size: 0.75rem; color: var(--muted); text-align: center; }
+    .cal-btn {
+      display: block;
+      width: 100%;
+      padding: 0.6rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #21262d;
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .cal-btn.running { border-color: var(--warn); color: var(--warn); }
+    .cal-status { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.5rem; min-height: 1.2rem; }
+    .cal-result {
+      font-size: 0.8rem;
+      background: #161b22;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      white-space: pre-wrap;
+      font-family: ui-monospace, monospace;
+      display: none;
+    }
+    .cal-result.show { display: block; }
+    .cal-notes { font-size: 0.8rem; color: var(--muted); margin-top: 0.5rem; }
+    .cal-notes li { margin-left: 1rem; margin-bottom: 0.25rem; }
   </style>
 </head>
 <body>
@@ -302,6 +331,15 @@
         <label>Roll / Pitch / Yaw rate</label>
         <div class="value" id="attitude">—</div>
       </div>
+      <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border)">
+        <h2 style="margin-bottom:0.5rem">캘리브레이션</h2>
+        <p class="hint" style="margin-bottom:0.5rem">넓은 바닥에서 실행 · 약 10초간 조향·전진·후진</p>
+        <div id="calStatus" class="cal-status">대기 중</div>
+        <button type="button" id="btnCalibrate" class="cal-btn">캘리브레이션 시작</button>
+        <button type="button" id="btnCalReset" class="cal-btn" style="display:none">결과 지우기</button>
+        <ul id="calNotes" class="cal-notes"></ul>
+        <pre id="calResult" class="cal-result"></pre>
+      </div>
     </div>
 
     <div class="card">
@@ -336,6 +374,58 @@
       const m = Math.floor(sec / 60);
       const s = Math.floor(sec % 60);
       return m + 'm ' + s + 's';
+    }
+
+    const phaseLabels = {
+      starting: '시작 중…',
+      prepare: '준비 중…',
+      steer_left: '좌회전 테스트',
+      steer_right: '우회전 테스트',
+      straight: '직진 테스트',
+      forward: '전진 테스트',
+      reverse: '후진 테스트',
+      done: '완료',
+    };
+
+    function applyCalibration(s) {
+      const state = s.calibration_state || 'idle';
+      const phase = s.calibration_phase || '';
+      const btn = $('btnCalibrate');
+      const resetBtn = $('btnCalReset');
+      const statusEl = $('calStatus');
+      const resultEl = $('calResult');
+      const notesEl = $('calNotes');
+
+      const running = state === 'running';
+      btn.disabled = running;
+      btn.classList.toggle('running', running);
+      btn.textContent = running ? '캘리브레이션 진행 중…' : '캘리브레이션 시작';
+
+      if (running) {
+        statusEl.textContent = phaseLabels[phase] || phase || '진행 중…';
+      } else if (state === 'done') {
+        statusEl.textContent = '완료 — 아래 값을 yaml에 복사하세요';
+      } else if (state === 'error') {
+        statusEl.textContent = '오류: ' + (s.calibration_error || 'unknown');
+      } else {
+        statusEl.textContent = '대기 중';
+      }
+
+      resetBtn.style.display = (state === 'done' || state === 'error') ? 'block' : 'none';
+
+      const res = s.calibration_result;
+      if (res && (state === 'done' || state === 'error')) {
+        resultEl.textContent =
+          'servo_trim_us: ' + res.servo_trim_us + '\n' +
+          'steering_invert: ' + res.steering_invert + '\n' +
+          'throttle_forward_start_us: ' + res.throttle_forward_start_us;
+        resultEl.classList.add('show');
+        notesEl.innerHTML = (res.notes || []).map(n => '<li>' + n + '</li>').join('');
+      } else if (!running) {
+        resultEl.classList.remove('show');
+        resultEl.textContent = '';
+        notesEl.innerHTML = '';
+      }
     }
 
     function apply(s) {
@@ -376,6 +466,7 @@
 
       $('conn').textContent = 'live';
       $('conn').className = 'conn live';
+      applyCalibration(s);
     }
 
     const es = new EventSource('/api/events');
@@ -462,6 +553,21 @@
     $('btnStop').onclick = async () => {
       steer = 0; throttle = 0; moveKnob(0, 0);
       await postJSON('/api/stop', {});
+    };
+
+    $('btnCalibrate').onclick = async () => {
+      if (!confirm('차량이 잠시 움직입니다. 넓은 바닥에서 실행하세요. 계속할까요?')) return;
+      try {
+        await postJSON('/api/calibrate', { confirm: true });
+      } catch (e) {
+        alert('캘리브레이션 시작 실패: ' + e.message);
+      }
+    };
+
+    $('btnCalReset').onclick = async () => {
+      try {
+        await fetch('/api/calibrate', { method: 'DELETE' });
+      } catch (_) {}
     };
 
     const keys = {};
