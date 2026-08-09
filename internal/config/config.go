@@ -94,10 +94,11 @@ type TelemetryConfig struct {
 }
 
 type WebConfig struct {
-	Enabled        bool   `yaml:"enabled"`
-	Addr           string `yaml:"addr"`
-	RefreshMS      int    `yaml:"refresh_ms"`
-	CameraQuality  int    `yaml:"camera_quality"`
+	Enabled         bool   `yaml:"enabled"`
+	Addr            string `yaml:"addr"`
+	RefreshMS       int    `yaml:"refresh_ms"`
+	CameraQuality   int    `yaml:"camera_quality"`
+	ManualTimeoutMS int    `yaml:"manual_timeout_ms"`
 }
 
 func Load(path string) (*Config, error) {
@@ -265,5 +266,8 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Web.CameraQuality == 0 {
 		c.Web.CameraQuality = 70
+	}
+	if c.Web.ManualTimeoutMS == 0 {
+		c.Web.ManualTimeoutMS = 500
 	}
 }

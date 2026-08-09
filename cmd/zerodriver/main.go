@@ -183,7 +183,17 @@ func main() {
 
 		case <-ticker.C:
 			fused := fuser.Fuse(lastLine, lastAtt, lastObs, ctrl.State())
-			lastCmd = ctrl.Tick(fused, interval.Seconds())
+
+			manualTimeout := time.Duration(cfg.Web.ManualTimeoutMS) * time.Millisecond
+			if statusStore != nil {
+				if active, mcmd := statusStore.ManualCommand(manualTimeout); active {
+					lastCmd = ctrl.DriveManual(mcmd)
+				} else {
+					lastCmd = ctrl.Tick(fused, interval.Seconds())
+				}
+			} else {
+				lastCmd = ctrl.Tick(fused, interval.Seconds())
+			}
 
 			if statusStore != nil {
 				statusStore.Update(web.UpdateInput{

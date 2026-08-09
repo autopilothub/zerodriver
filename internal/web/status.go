@@ -10,6 +10,7 @@ import (
 // Status is the live vehicle state exposed over HTTP.
 type Status struct {
 	Mode            string    `json:"mode"`
+	DriveMode       string    `json:"drive_mode"`
 	State           string    `json:"state"`
 	LineOffset      float64   `json:"line_offset"`
 	LookaheadOffset float64   `json:"lookahead_offset"`
@@ -46,11 +47,15 @@ type UpdateInput struct {
 
 // Store holds the latest status and optional camera frame for the dashboard.
 type Store struct {
-	mu      sync.RWMutex
-	status  Status
-	frame   []byte
-	frameW  int
-	frameH  int
+	mu             sync.RWMutex
+	status         Status
+	frame          []byte
+	frameW         int
+	frameH         int
+	driveMode      DriveMode
+	manualSteer    float64
+	manualThrottle float64
+	manualLastCmd  time.Time
 }
 
 func NewStore() *Store {
@@ -71,8 +76,14 @@ func (s *Store) Update(in UpdateInput) {
 		uptime = time.Since(in.StartedAt).Seconds()
 	}
 
+	dm := s.driveMode
+	if dm == "" {
+		dm = DriveAuto
+	}
+
 	s.status = Status{
 		Mode:            in.Mode,
+		DriveMode:       string(dm),
 		State:           in.State.String(),
 		LineOffset:      in.Fused.LineOffset,
 		LookaheadOffset: in.Fused.LookaheadOffset,

@@ -58,6 +58,13 @@ func (c *Controller) Stop() {
 	c.motor.Stop()
 }
 
+func (c *Controller) DriveManual(cmd domain.ControlCommand) domain.ControlCommand {
+	cmd.Steering = clamp(cmd.Steering, -1, 1)
+	cmd.Throttle = clamp(cmd.Throttle, 0, 1)
+	c.applyMotor(cmd)
+	return cmd
+}
+
 // Tick runs one control cycle.
 func (c *Controller) Tick(input domain.FusedInput, dt float64) domain.ControlCommand {
 	state := c.stateMachine.Update(input.FrontDistance)

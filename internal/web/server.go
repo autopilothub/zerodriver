@@ -31,6 +31,9 @@ func NewServer(cfg *config.WebConfig, store *Store) *Server {
 	mux.HandleFunc("/api/status", s.handleStatus)
 	mux.HandleFunc("/api/events", s.handleEvents)
 	mux.HandleFunc("/api/camera.jpg", s.handleCamera)
+	mux.HandleFunc("/api/mode", s.handleMode)
+	mux.HandleFunc("/api/drive", s.handleDrive)
+	mux.HandleFunc("/api/stop", s.handleStop)
 
 	s.srv = &http.Server{
 		Addr:              cfg.Addr,
@@ -115,6 +118,54 @@ func (s *Server) handleCamera(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/jpeg")
 	w.Header().Set("Cache-Control", "no-cache")
 	_, _ = w.Write(jpeg)
+}
+
+func (s *Server) handleMode(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var body struct {
+		DriveMode string `json:"drive_mode"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "bad json", http.StatusBadRequest)
+		return
+	}
+	s.store.SetDriveMode(DriveMode(body.DriveMode))
+	writeJSON(w, map[string]string{"drive_mode": string(s.store.DriveMode())})
+}
+
+func (s *Server) handleDrive(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var body struct {
+		Steering float64 `json:"steering"`
+		Throttle float64 `json:"throttle"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "bad json", http.StatusBadRequest)
+		return
+	}
+	if err := s.store.SetManualDrive(body.Steering, body.Throttle); err != nil {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	}
+	writeJSON(w, map[string]any{
+		"steering": body.Steering,
+		"throttle": body.Throttle,
+	})
+}
+
+func (s *Server) handleStop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.store.StopManual()
+	writeJSON(w, map[string]string{"status": "stopped"})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

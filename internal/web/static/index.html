@@ -166,6 +166,57 @@
     .conn { font-size: 0.8rem; color: var(--muted); }
     .conn.live { color: var(--accent); }
     .conn.off { color: var(--danger); }
+    .badge.MANUAL { background: #8957e5; color: #fff; }
+    .mode-btns { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .mode-btn {
+      flex: 1;
+      padding: 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #21262d;
+      color: var(--text);
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .mode-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .mode-btn.manual-active { background: #8957e5; border-color: #8957e5; color: #fff; }
+    .manual-panel.hidden { display: none; }
+    .joystick {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      margin: 0 auto 0.75rem;
+      border-radius: 50%;
+      background: #161b22;
+      border: 2px solid var(--border);
+      touch-action: none;
+      user-select: none;
+    }
+    .joystick-knob {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      left: 50%;
+      top: 50%;
+      margin: -24px 0 0 -24px;
+      border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 12px rgba(88,166,255,0.5);
+      pointer-events: none;
+    }
+    .stop-btn {
+      display: block;
+      width: 100%;
+      padding: 0.6rem;
+      margin-bottom: 0.5rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--danger);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .hint { font-size: 0.75rem; color: var(--muted); text-align: center; }
   </style>
 </head>
 <body>
@@ -173,6 +224,7 @@
     <h1>zerodriver</h1>
     <div>
       <span id="mode" class="conn">—</span>
+      <span id="driveMode" class="badge IDLE">AUTO</span>
       <span id="state" class="badge IDLE">IDLE</span>
       <span id="conn" class="conn off">연결 중…</span>
     </div>
@@ -182,6 +234,21 @@
     <div class="card camera-wrap">
       <h2>카메라</h2>
       <img id="camera" alt="camera" src="/api/camera.jpg">
+    </div>
+
+    <div class="card">
+      <h2>수동 제어</h2>
+      <div class="mode-btns">
+        <button type="button" id="btnAuto" class="mode-btn active">자동</button>
+        <button type="button" id="btnManual" class="mode-btn">수동</button>
+      </div>
+      <div id="manualPanel" class="manual-panel hidden">
+        <div id="joystick" class="joystick">
+          <div id="joystickKnob" class="joystick-knob"></div>
+        </div>
+        <button type="button" id="btnStop" class="stop-btn">정지</button>
+        <p class="hint">패드 드래그 · 키보드 ↑↓←→ · 0.5초 무응답 시 자동 정지</p>
+      </div>
     </div>
 
     <div class="card">
@@ -273,6 +340,12 @@
 
     function apply(s) {
       $('mode').textContent = s.mode || '—';
+      const dm = (s.drive_mode || 'auto').toUpperCase();
+      const dmEl = $('driveMode');
+      dmEl.textContent = dm;
+      dmEl.className = 'badge ' + (dm === 'MANUAL' ? 'MANUAL' : 'IDLE');
+      syncDriveModeUI(s.drive_mode || 'auto');
+
       const st = $('state');
       st.textContent = s.state;
       st.className = 'badge ' + s.state;
@@ -317,6 +390,107 @@
     setInterval(() => {
       $('camera').src = '/api/camera.jpg?t=' + Date.now();
     }, 500);
+
+    let localDriveMode = 'auto';
+    let steer = 0, throttle = 0;
+    let joyActive = false;
+
+    async function postJSON(url, body) {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    }
+
+    function syncDriveModeUI(mode) {
+      localDriveMode = mode;
+      const manual = mode === 'manual';
+      $('btnAuto').classList.toggle('active', !manual);
+      $('btnManual').classList.toggle('manual-active', manual);
+      $('btnManual').classList.toggle('active', false);
+      $('manualPanel').classList.toggle('hidden', !manual);
+      if (!manual) {
+        steer = 0; throttle = 0;
+        moveKnob(0, 0);
+      }
+    }
+
+    async function setDriveMode(mode) {
+      await postJSON('/api/mode', { drive_mode: mode });
+      syncDriveModeUI(mode);
+    }
+
+    async function sendDrive() {
+      if (localDriveMode !== 'manual') return;
+      try {
+        await postJSON('/api/drive', { steering: steer, throttle: throttle });
+      } catch (_) {}
+    }
+
+    function moveKnob(x, y) {
+      const pad = $('joystick');
+      const knob = $('joystickKnob');
+      const r = pad.clientWidth / 2 - 24;
+      const cx = Math.max(-r, Math.min(r, x));
+      const cy = Math.max(-r, Math.min(r, y));
+      knob.style.transform = 'translate(' + cx + 'px,' + cy + 'px)';
+      steer = cx / r;
+      throttle = Math.max(0, -cy / r);
+    }
+
+    function joyFromEvent(e) {
+      const pad = $('joystick');
+      const rect = pad.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const x = (e.clientX ?? e.touches?.[0]?.clientX) - cx;
+      const y = (e.clientY ?? e.touches?.[0]?.clientY) - cy;
+      moveKnob(x, y);
+    }
+
+    const pad = $('joystick');
+    pad.addEventListener('pointerdown', e => { joyActive = true; pad.setPointerCapture(e.pointerId); joyFromEvent(e); });
+    pad.addEventListener('pointermove', e => { if (joyActive) joyFromEvent(e); });
+    pad.addEventListener('pointerup', () => { joyActive = false; moveKnob(0, 0); sendDrive(); });
+    pad.addEventListener('pointercancel', () => { joyActive = false; moveKnob(0, 0); sendDrive(); });
+
+    $('btnAuto').onclick = () => setDriveMode('auto');
+    $('btnManual').onclick = () => setDriveMode('manual');
+    $('btnStop').onclick = async () => {
+      steer = 0; throttle = 0; moveKnob(0, 0);
+      await postJSON('/api/stop', {});
+    };
+
+    const keys = {};
+    document.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if (localDriveMode === 'manual') updateKeys();
+    });
+    document.addEventListener('keyup', e => {
+      keys[e.key] = false;
+      if (localDriveMode === 'manual') updateKeys();
+    });
+
+    function updateKeys() {
+      let s = 0, t = 0;
+      if (keys['ArrowLeft']) s -= 1;
+      if (keys['ArrowRight']) s += 1;
+      if (keys['ArrowUp']) t += 1;
+      if (keys['ArrowDown']) t -= 0.5;
+      steer = Math.max(-1, Math.min(1, s));
+      throttle = Math.max(0, Math.min(1, t));
+      const r = pad.clientWidth / 2 - 24;
+      moveKnob(steer * r, -throttle * r);
+    }
+
+    setInterval(() => {
+      if (localDriveMode === 'manual' && (joyActive || keys['ArrowLeft'] || keys['ArrowRight'] || keys['ArrowUp'] || keys['ArrowDown'])) {
+        sendDrive();
+      }
+    }, 100);
   </script>
 </body>
 </html>
