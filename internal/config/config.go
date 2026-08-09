@@ -68,6 +68,7 @@ type HardwareConfig struct {
 	I2CBus            string `yaml:"i2c_bus"`
 	I2CAddr           int    `yaml:"i2c_addr"`
 	IMUModel          string `yaml:"imu_model"` // bno085, mpu9250, mpu6500, auto
+	LidarEnabled      *bool  `yaml:"lidar_enabled"` // default true; false skips serial open
 	LidarModel        string `yaml:"lidar_model"`
 	LidarPort         string `yaml:"lidar_port"`
 	LidarBaud         int    `yaml:"lidar_baud"`
@@ -110,6 +111,14 @@ func Load(path string) (*Config, error) {
 	}
 	cfg.applyDefaults()
 	return &cfg, nil
+}
+
+// LidarEnabled reports whether LiDAR hardware should be used.
+func (c *Config) LidarEnabled() bool {
+	if c.Hardware.LidarEnabled == nil {
+		return true
+	}
+	return *c.Hardware.LidarEnabled
 }
 
 func (c *Config) applyDefaults() {
@@ -186,6 +195,10 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Hardware.I2CBus == "" {
 		c.Hardware.I2CBus = "/dev/i2c-1"
+	}
+	if c.Hardware.LidarEnabled == nil {
+		enabled := true
+		c.Hardware.LidarEnabled = &enabled
 	}
 	if c.Hardware.LidarPort == "" {
 		c.Hardware.LidarPort = "/dev/ttyUSB0"

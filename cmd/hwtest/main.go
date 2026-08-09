@@ -37,9 +37,13 @@ func main() {
 		passed++
 	}
 
-	total++
-	if testLidar(cfg) {
-		passed++
+	if cfg.LidarEnabled() {
+		total++
+		if testLidar(cfg) {
+			passed++
+		}
+	} else {
+		fmt.Println("\n--- LiDAR ---\nSKIP (lidar_enabled: false)")
 	}
 
 	total++

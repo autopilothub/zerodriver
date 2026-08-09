@@ -8,6 +8,9 @@ import (
 
 // NewLidar creates a LiDAR device based on config mode and model.
 func NewLidar(cfg *config.Config) (Lidar, error) {
+	if !cfg.LidarEnabled() {
+		return NewNoopLidar(), nil
+	}
 	switch cfg.Mode {
 	case "mock":
 		return NewMockLidar(), nil

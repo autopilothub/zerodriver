@@ -77,7 +77,7 @@ func main() {
 		}
 	}()
 
-	log.Printf("zerodriver starting (mode=%s, loop=%dHz)", cfg.Mode, cfg.Control.LoopHz)
+	log.Printf("zerodriver starting (mode=%s, loop=%dHz, lidar=%v)", cfg.Mode, cfg.Control.LoopHz, cfg.LidarEnabled())
 
 	var statusStore *web.Store
 	if cfg.Web.Enabled {
@@ -151,17 +151,21 @@ func main() {
 		send(imuCh, att)
 	})
 
-	go sensorLoop(ctx, time.Second/5, func() {
-		obs, err := lidarParser.Scan()
-		if err != nil {
-			n := lidarErrors.Add(1)
-			if *verbose || n%5 == 1 {
-				log.Printf("lidar error (#%d): %v", n, err)
+	if cfg.LidarEnabled() {
+		go sensorLoop(ctx, time.Second/5, func() {
+			obs, err := lidarParser.Scan()
+			if err != nil {
+				n := lidarErrors.Add(1)
+				if *verbose || n%5 == 1 {
+					log.Printf("lidar error (#%d): %v", n, err)
+				}
+				return
 			}
-			return
-		}
-		send(lidarCh, obs)
-	})
+			send(lidarCh, obs)
+		})
+	} else {
+		log.Printf("lidar disabled (obstacle avoidance off)")
+	}
 
 	for {
 		select {

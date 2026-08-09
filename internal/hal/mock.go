@@ -62,6 +62,20 @@ func (m *MockLidar) Scan() (domain.ObstacleScan, error) {
 
 func (m *MockLidar) Close() error { return nil }
 
+// NoopLidar reports a clear path without touching hardware.
+type NoopLidar struct{}
+
+func NewNoopLidar() *NoopLidar { return &NoopLidar{} }
+
+func (n *NoopLidar) Scan() (domain.ObstacleScan, error) {
+	return domain.ObstacleScan{
+		FrontDistance: 999,
+		Timestamp:     time.Now(),
+	}, nil
+}
+
+func (n *NoopLidar) Close() error { return nil }
+
 // MockCamera generates synthetic frames with a moving line.
 type MockCamera struct {
 	mu     sync.Mutex
