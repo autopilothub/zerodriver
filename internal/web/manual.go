@@ -47,7 +47,7 @@ func (s *Store) SetManualDrive(steering, throttle float64) error {
 		return errNotManual
 	}
 	s.manualSteer = clamp(steering, -1, 1)
-	s.manualThrottle = clamp(throttle, 0, 1)
+	s.manualThrottle = clamp(throttle, -1, 1)
 	s.manualLastCmd = time.Now()
 	return nil
 }

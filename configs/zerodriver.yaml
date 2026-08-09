@@ -53,9 +53,12 @@ hardware:
   servo_center_us: 1500
   servo_max_us: 2000
   servo_trim_us: 0
-  steering_invert: false
+  throttle_map: bidirectional
   throttle_min_us: 1500
+  throttle_reverse_us: 1000
   throttle_max_us: 2000
+  throttle_forward_start_us: 1580
+  throttle_trim_us: 0
 
 telemetry:
   enabled: false

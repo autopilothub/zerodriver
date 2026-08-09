@@ -55,8 +55,12 @@ hardware:
   servo_max_us: 2000
   servo_trim_us: 0
   steering_invert: false
-  throttle_min_us: 1500
+  throttle_map: bidirectional   # linear | neutral_forward | bidirectional
+  throttle_min_us: 1500         # neutral/stop
+  throttle_reverse_us: 1000
   throttle_max_us: 2000
+  throttle_forward_start_us: 1580  # ESC 데드존 보정 (안 움직이면 1600~1650)
+  throttle_trim_us: 0
 
 telemetry:
   enabled: false

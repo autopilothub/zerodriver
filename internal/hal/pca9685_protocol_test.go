@@ -1,7 +1,6 @@
 package hal
 
 import (
-	"math"
 	"testing"
 )
 
@@ -38,14 +37,15 @@ func TestApplySteeringTrimInvert(t *testing.T) {
 }
 
 func TestThrottleToPulseUs(t *testing.T) {
-	if ThrottleToPulseUs(0, 1500, 2000) != 1500 {
-		t.Fatal("throttle 0 should be neutral")
+	cfg := ThrottlePulseConfig{MinUs: 1500, MaxUs: 2000, Map: ThrottleMapLinear}
+	if ThrottleToPulseUs(0, cfg) != 1500 {
+		t.Fatal("throttle 0 should be min")
 	}
-	if ThrottleToPulseUs(1, 1500, 2000) != 2000 {
+	if ThrottleToPulseUs(1, cfg) != 2000 {
 		t.Fatal("throttle 1 should be max")
 	}
-	got := ThrottleToPulseUs(0.5, 1500, 2000)
-	if math.Abs(float64(got-1750)) > 1 {
+	got := ThrottleToPulseUs(0.5, cfg)
+	if got != 1750 {
 		t.Fatalf("throttle 0.5: want 1750, got %d", got)
 	}
 }

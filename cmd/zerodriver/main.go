@@ -104,8 +104,9 @@ func main() {
 		log.Fatalf("ESC arm: %v", err)
 	}
 	log.Printf("ESC armed (%ds)", cfg.Control.ESCArmDelaySec)
-	log.Printf("throttle pulse range: %dµs (stop) → %dµs (max), CH%d",
-		cfg.Hardware.ThrottleMinUs, cfg.Hardware.ThrottleMaxUs, cfg.Hardware.ThrottleChannel)
+	log.Printf("throttle map=%s pulse %d→%dµs, CH%d",
+		cfg.Hardware.ThrottleMap, cfg.Hardware.ThrottleMinUs, cfg.Hardware.ThrottleMaxUs,
+		cfg.Hardware.ThrottleChannel)
 	ctrl.Start()
 
 	interval := time.Second / time.Duration(cfg.Control.LoopHz)

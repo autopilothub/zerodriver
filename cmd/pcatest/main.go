@@ -38,13 +38,15 @@ func main() {
 
 	log.Printf("PCA9685 test (mode=%s)", cfg.Mode)
 	log.Printf("channels: steering=%d throttle=%d", cfg.Hardware.SteeringChannel, cfg.Hardware.ThrottleChannel)
+	log.Printf("throttle map=%s min=%d max=%d forward_start=%d",
+		cfg.Hardware.ThrottleMap, cfg.Hardware.ThrottleMinUs, cfg.Hardware.ThrottleMaxUs,
+		cfg.Hardware.ThrottleForwardStartUs)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-	// ESC arm
 	log.Println("ESC arm: throttle=0 for 2s...")
-	motor.Drive(0, 0)
+	driveAndLog(motor, 0, 0)
 	sleepOrAbort(2*time.Second, sigCh)
 
 	steps := []struct {
@@ -57,7 +59,9 @@ func main() {
 		{"steer left", -0.5, 0, 1 * time.Second},
 		{"steer right", 0.5, 0, 1 * time.Second},
 		{"center", 0, 0, 500 * time.Millisecond},
-		{"throttle 30%", 0, 0.3, 1 * time.Second},
+		{"throttle 30%", 0, 0.3, 2 * time.Second},
+		{"throttle 60%", 0, 0.6, 2 * time.Second},
+		{"reverse 30%", 0, -0.3, 2 * time.Second},
 		{"stop", 0, 0, 500 * time.Millisecond},
 	}
 
@@ -70,14 +74,23 @@ func main() {
 		default:
 		}
 		log.Printf("→ %s (steer=%.1f throttle=%.1f)", step.name, step.steering, step.throttle)
-		if err := motor.Drive(step.steering, step.throttle); err != nil {
-			log.Fatalf("drive error: %v", err)
-		}
+		driveAndLog(motor, step.steering, step.throttle)
 		sleepOrAbort(step.wait, sigCh)
 	}
 
 	motor.Stop()
 	log.Println("done")
+}
+
+func driveAndLog(motor hal.Motor, steering, throttle float64) {
+	if pm, ok := motor.(interface {
+		ThrottlePulse(float64) int
+	}); ok {
+		log.Printf("   ESC pulse ≈ %dµs", pm.ThrottlePulse(throttle))
+	}
+	if err := motor.Drive(steering, throttle); err != nil {
+		log.Fatalf("drive error: %v", err)
+	}
 }
 
 func sleepOrAbort(d time.Duration, sigCh chan os.Signal) {

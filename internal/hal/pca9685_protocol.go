@@ -24,8 +24,7 @@ type PCA9685Config struct {
 	ServoMaxUs       int
 	ServoTrimUs      int
 	SteeringInvert   bool
-	ThrottleMinUs    int
-	ThrottleMaxUs    int
+	Throttle         ThrottlePulseConfig
 }
 
 func (c PCA9685Config) withDefaults() PCA9685Config {
@@ -45,12 +44,7 @@ func (c PCA9685Config) withDefaults() PCA9685Config {
 	if out.ServoMaxUs == 0 {
 		out.ServoMaxUs = pca9685DefaultMaxUs
 	}
-	if out.ThrottleMinUs == 0 {
-		out.ThrottleMinUs = pca9685DefaultThrottleNeutralUs
-	}
-	if out.ThrottleMaxUs == 0 {
-		out.ThrottleMaxUs = pca9685DefaultMaxUs
-	}
+	out.Throttle = out.Throttle.withDefaults()
 	return out
 }
 
@@ -114,13 +108,3 @@ func ApplySteering(steering float64, minUs, centerUs, maxUs, trimUs int, invert 
 	return pulse
 }
 
-// ThrottleToPulseUs maps throttle 0..1 to ESC pulse width (0=neutral/stop, 1=max forward).
-func ThrottleToPulseUs(throttle float64, neutralUs, maxUs int) int {
-	if throttle < 0 {
-		throttle = 0
-	}
-	if throttle > 1 {
-		throttle = 1
-	}
-	return neutralUs + int(float64(maxUs-neutralUs)*throttle)
-}

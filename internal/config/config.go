@@ -86,8 +86,12 @@ type HardwareConfig struct {
 	ServoMaxUs        int  `yaml:"servo_max_us"`
 	ServoTrimUs       int  `yaml:"servo_trim_us"`       // µs offset at center (wheels left → increase)
 	SteeringInvert    bool `yaml:"steering_invert"`     // flip left/right if servo wired backwards
-	ThrottleMinUs     int  `yaml:"throttle_min_us"`     // ESC neutral/stop µs (car ESC: 1500)
-	ThrottleMaxUs     int  `yaml:"throttle_max_us"`     // max forward µs
+	ThrottleMinUs         int    `yaml:"throttle_min_us"`          // stop/neutral or linear min
+	ThrottleMaxUs         int    `yaml:"throttle_max_us"`          // max forward
+	ThrottleReverseUs     int    `yaml:"throttle_reverse_us"`      // reverse pulse (bidirectional)
+	ThrottleTrimUs        int    `yaml:"throttle_trim_us"`         // µs offset on ESC pulse
+	ThrottleForwardStartUs int   `yaml:"throttle_forward_start_us"` // min µs when throttle > 0
+	ThrottleMap           string `yaml:"throttle_map"`             // neutral_forward, linear, bidirectional
 }
 
 type TelemetryConfig struct {
@@ -258,7 +262,17 @@ func (c *Config) applyDefaults() {
 		c.Hardware.ServoMaxUs = 2000
 	}
 	if c.Hardware.ThrottleMinUs == 0 {
-		c.Hardware.ThrottleMinUs = 1500 // ESC neutral/stop
+		if c.Hardware.ThrottleMap == "linear" {
+			c.Hardware.ThrottleMinUs = 1000
+		} else {
+			c.Hardware.ThrottleMinUs = 1500 // ESC neutral/stop
+		}
+	}
+	if c.Hardware.ThrottleMap == "" {
+		c.Hardware.ThrottleMap = "linear"
+	}
+	if c.Hardware.ThrottleReverseUs == 0 {
+		c.Hardware.ThrottleReverseUs = 1000
 	}
 	if c.Hardware.ThrottleMaxUs == 0 {
 		c.Hardware.ThrottleMaxUs = 2000

@@ -17,6 +17,25 @@ type PCA9685Motor struct {
 
 // NewPCA9685Motor creates an RC car motor driver using PCA9685.
 func NewPCA9685Motor(i2cBus string, hw config.HardwareConfig) (*PCA9685Motor, error) {
+	throttleCfg := ThrottlePulseConfig{
+		MinUs:          hw.ThrottleMinUs,
+		MaxUs:          hw.ThrottleMaxUs,
+		ReverseUs:      hw.ThrottleReverseUs,
+		TrimUs:         hw.ThrottleTrimUs,
+		ForwardStartUs: hw.ThrottleForwardStartUs,
+		Map:            ThrottleMapMode(hw.ThrottleMap),
+	}
+	switch throttleCfg.Map {
+	case ThrottleMapNeutralForward, ThrottleMapBidirectional:
+		if hw.ThrottleMinUs > 0 {
+			throttleCfg.NeutralUs = hw.ThrottleMinUs
+		}
+	default:
+		if throttleCfg.MinUs == 0 {
+			throttleCfg.MinUs = pca9685DefaultMinUs
+		}
+	}
+
 	cfg := PCA9685Config{
 		Addr:            hw.PCA9685Addr,
 		FreqHz:          hw.PCA9685FreqHz,
@@ -27,8 +46,7 @@ func NewPCA9685Motor(i2cBus string, hw config.HardwareConfig) (*PCA9685Motor, er
 		ServoMaxUs:      hw.ServoMaxUs,
 		ServoTrimUs:     hw.ServoTrimUs,
 		SteeringInvert:  hw.SteeringInvert,
-		ThrottleMinUs:   hw.ThrottleMinUs,
-		ThrottleMaxUs:   hw.ThrottleMaxUs,
+		Throttle:        throttleCfg,
 	}.withDefaults()
 
 	pwm, err := NewPCA9685(i2cBus, cfg.Addr, cfg.FreqHz)
@@ -50,8 +68,13 @@ func (m *PCA9685Motor) Drive(steering, throttle float64) error {
 		return err
 	}
 
-	throttlePulse := ThrottleToPulseUs(throttle, m.cfg.ThrottleMinUs, m.cfg.ThrottleMaxUs)
+	throttlePulse := ThrottleToPulseUs(throttle, m.cfg.Throttle)
 	return m.pwm.SetPulseUs(m.cfg.ThrottleChannel, throttlePulse)
+}
+
+// ThrottlePulse returns the ESC pulse width for a throttle command (diagnostics).
+func (m *PCA9685Motor) ThrottlePulse(throttle float64) int {
+	return ThrottleToPulseUs(throttle, m.cfg.Throttle)
 }
 
 func (m *PCA9685Motor) Stop() error {

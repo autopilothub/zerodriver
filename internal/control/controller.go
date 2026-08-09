@@ -64,7 +64,7 @@ func (c *Controller) Stop() {
 
 func (c *Controller) DriveManual(cmd domain.ControlCommand, dt float64) domain.ControlCommand {
 	cmd.Steering = clamp(cmd.Steering, -1, 1)
-	cmd.Throttle = c.throttleSlew.Step(clamp(cmd.Throttle, 0, 1), dt)
+	cmd.Throttle = c.throttleSlew.Step(clamp(cmd.Throttle, -1, 1), dt)
 	c.applyMotor(cmd)
 	return cmd
 }
@@ -103,6 +103,9 @@ func (c *Controller) targetThrottle(input domain.FusedInput, steering float64) f
 		if throttle > c.cfg.Control.CornerSpeed {
 			throttle = c.cfg.Control.CornerSpeed
 		}
+	}
+	if throttle < 0 {
+		throttle = 0
 	}
 	return throttle
 }

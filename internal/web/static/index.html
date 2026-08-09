@@ -437,8 +437,8 @@
       const cx = Math.max(-r, Math.min(r, x));
       const cy = Math.max(-r, Math.min(r, y));
       knob.style.transform = 'translate(' + cx + 'px,' + cy + 'px)';
-      steer = cx / r;
-      throttle = Math.max(0, -cy / r);
+	steer = cx / r;
+      throttle = -cy / r;
     }
 
     function joyFromEvent(e) {
@@ -479,9 +479,9 @@
       if (keys['ArrowLeft']) s -= 1;
       if (keys['ArrowRight']) s += 1;
       if (keys['ArrowUp']) t += 1;
-      if (keys['ArrowDown']) t -= 0.5;
+      if (keys['ArrowDown']) t -= 1;
       steer = Math.max(-1, Math.min(1, s));
-      throttle = Math.max(0, Math.min(1, t));
+      throttle = Math.max(-1, Math.min(1, t));
       const r = pad.clientWidth / 2 - 24;
       moveKnob(steer * r, -throttle * r);
     }

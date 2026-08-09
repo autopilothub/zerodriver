@@ -14,8 +14,8 @@ func NewThrottleSlew(maxRate float64) *ThrottleSlew {
 }
 
 func (s *ThrottleSlew) Step(target, dt float64) float64 {
-	if target < 0 {
-		target = 0
+	if target < -1 {
+		target = -1
 	}
 	if target > 1 {
 		target = 1
