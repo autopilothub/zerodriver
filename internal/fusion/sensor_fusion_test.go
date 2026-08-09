@@ -9,31 +9,44 @@ import (
 
 func TestFusion_TracingWithLine(t *testing.T) {
 	f := New()
-	line := domain.LinePosition{Offset: 0.3, Detected: true, Timestamp: time.Now()}
-	att := domain.Attitude{GyroZ: 5.0}
+	line := domain.LinePosition{
+		Offset: 0.3, LookaheadOffset: 0.25, Detected: true, Timestamp: time.Now(),
+	}
+	att := domain.Attitude{GyroZ: 5.0, HasMag: true, Heading: 90}
 	obs := domain.ObstacleScan{FrontDistance: 999}
 
 	input := f.Fuse(line, att, obs, domain.StateTracing)
 	if !input.LineDetected {
 		t.Fatal("line should be detected")
 	}
-	if input.LineOffset != 0.3 {
-		t.Fatalf("expected offset 0.3, got %f", input.LineOffset)
+	if input.LookaheadOffset != 0.25 {
+		t.Fatalf("expected lookahead 0.25, got %f", input.LookaheadOffset)
+	}
+	if input.YawRate != 5.0 {
+		t.Fatalf("expected yaw rate 5, got %f", input.YawRate)
 	}
 }
 
-func TestFusion_LineLost(t *testing.T) {
+func TestFusion_LineLostUsesHeading(t *testing.T) {
 	f := New()
-	line := domain.LinePosition{Detected: false}
-	att := domain.Attitude{Yaw: 10.0, GyroZ: 2.0}
-	obs := domain.ObstacleScan{FrontDistance: 999}
+	line := domain.LinePosition{Offset: 0.05, LookaheadOffset: 0.05, Detected: true}
+	att := domain.Attitude{HasMag: true, Heading: 90, GyroZ: 2.0}
+	f.Fuse(line, att, domain.ObstacleScan{FrontDistance: 999}, domain.StateTracing)
 
-	input := f.Fuse(line, att, obs, domain.StateTracing)
-	if input.LineDetected {
+	lost := f.Fuse(
+		domain.LinePosition{Detected: false},
+		domain.Attitude{HasMag: true, Heading: 100, GyroZ: 2.0},
+		domain.ObstacleScan{FrontDistance: 999},
+		domain.StateTracing,
+	)
+	if lost.LineDetected {
 		t.Fatal("line should not be detected")
 	}
-	if input.LineOffset == 0 {
-		t.Fatal("should use IMU for dead reckoning")
+	if lost.HeadingError == 0 {
+		t.Fatal("should have heading error toward reference")
+	}
+	if lost.HeadingError >= 0 {
+		t.Fatalf("heading 100 vs ref 90 should be negative error, got %f", lost.HeadingError)
 	}
 }
 
@@ -47,7 +60,13 @@ func TestFusion_Avoiding(t *testing.T) {
 	if input.LineDetected {
 		t.Fatal("should ignore line during avoiding")
 	}
-	if input.FrontDistance != 10 {
-		t.Fatalf("expected front distance 10, got %f", input.FrontDistance)
+}
+
+func TestHeadingErrorDeg(t *testing.T) {
+	if d := headingErrorDeg(90, 100); d != -10 {
+		t.Fatalf("expected -10, got %f", d)
+	}
+	if d := headingErrorDeg(350, 10); d != -20 {
+		t.Fatalf("wrap expected -20, got %f", d)
 	}
 }

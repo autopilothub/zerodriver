@@ -131,7 +131,10 @@ func testCamera(cfg *config.Config) bool {
 	}
 	defer camera.Close()
 
-	detector := perception.NewLineDetector(cfg.Camera.Width, cfg.Camera.Height, cfg.Camera.ROIY, cfg.Camera.LineThreshold)
+	detector := perception.NewLineDetector(
+		cfg.Camera.Width, cfg.Camera.Height, cfg.Camera.ROIY,
+		cfg.Camera.LookaheadRows, cfg.Camera.LineThreshold,
+	)
 
 	for i := 0; i < 3; i++ {
 		frame, err := camera.Capture()

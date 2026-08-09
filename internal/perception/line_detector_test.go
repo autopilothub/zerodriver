@@ -5,7 +5,7 @@ import (
 )
 
 func TestLineDetector_CenteredLine(t *testing.T) {
-	d := NewLineDetector(320, 240, 160, 100)
+	d := NewLineDetector(320, 240, 160, 40, 100)
 	frame := make([]byte, 320*240*3)
 	for i := range frame {
 		frame[i] = 255
@@ -27,7 +27,7 @@ func TestLineDetector_CenteredLine(t *testing.T) {
 }
 
 func TestLineDetector_OffsetRight(t *testing.T) {
-	d := NewLineDetector(320, 240, 160, 100)
+	d := NewLineDetector(320, 240, 160, 40, 100)
 	frame := make([]byte, 320*240*3)
 	for i := range frame {
 		frame[i] = 255
@@ -48,7 +48,7 @@ func TestLineDetector_OffsetRight(t *testing.T) {
 }
 
 func TestLineDetector_NoLine(t *testing.T) {
-	d := NewLineDetector(320, 240, 160, 100)
+	d := NewLineDetector(320, 240, 160, 40, 100)
 	frame := make([]byte, 320*240*3)
 	for i := range frame {
 		frame[i] = 255

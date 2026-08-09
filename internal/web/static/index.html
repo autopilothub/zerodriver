@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>zerodriver</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --border: #2d3a4f;
+      --text: #e6edf3;
+      --muted: #8b9cb3;
+      --accent: #3fb950;
+      --warn: #d29922;
+      --danger: #f85149;
+      --blue: #58a6ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    h1 { font-size: 1.25rem; font-weight: 600; }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .badge.IDLE { background: #30363d; color: var(--muted); }
+    .badge.TRACING { background: #238636; color: #fff; }
+    .badge.AVOIDING { background: #9e6a03; color: #fff; }
+    .badge.STOPPED { background: #da3633; color: #fff; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    .card h2 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .metric { margin-bottom: 0.6rem; }
+    .metric label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.2rem;
+    }
+    .metric .value { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+    .bar {
+      height: 8px;
+      background: #21262d;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 0.25rem;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.15s ease;
+    }
+    .bar-fill.steer { background: var(--blue); }
+    .bar-fill.throttle { background: var(--accent); }
+    .track {
+      position: relative;
+      height: 120px;
+      background: #161b22;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .track-center {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #30363d;
+      transform: translateX(-50%);
+    }
+    .track-dot {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      transform: translate(-50%, -50%);
+      transition: left 0.1s ease;
+      box-shadow: 0 0 8px var(--accent);
+    }
+    .track-dot.lookahead {
+      top: 35%;
+      background: var(--blue);
+      box-shadow: 0 0 8px var(--blue);
+      width: 10px;
+      height: 10px;
+    }
+    .track-dot.bottom { top: 85%; }
+    .compass {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      position: relative;
+      background: #161b22;
+    }
+    .compass-needle {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 4px;
+      height: 40px;
+      background: var(--danger);
+      transform-origin: center bottom;
+      margin-left: -2px;
+      margin-top: -40px;
+      border-radius: 2px;
+      transition: transform 0.15s ease;
+    }
+    .compass-label {
+      text-align: center;
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .camera-wrap img {
+      width: 100%;
+      border-radius: 8px;
+      background: #000;
+      min-height: 120px;
+    }
+    .errors { font-size: 0.85rem; color: var(--muted); }
+    .errors span { margin-right: 1rem; }
+    .errors .err { color: var(--danger); }
+    footer {
+      margin-top: 1rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    .conn { font-size: 0.8rem; color: var(--muted); }
+    .conn.live { color: var(--accent); }
+    .conn.off { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>zerodriver</h1>
+    <div>
+      <span id="mode" class="conn">—</span>
+      <span id="state" class="badge IDLE">IDLE</span>
+      <span id="conn" class="conn off">연결 중…</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card camera-wrap">
+      <h2>카메라</h2>
+      <img id="camera" alt="camera" src="/api/camera.jpg">
+    </div>
+
+    <div class="card">
+      <h2>라인 추적</h2>
+      <div class="track">
+        <div class="track-center"></div>
+        <div id="dotLook" class="track-dot lookahead" style="left:50%"></div>
+        <div id="dotBottom" class="track-dot bottom" style="left:50%"></div>
+      </div>
+      <div class="metric" style="margin-top:0.75rem">
+        <label>현재 오프셋</label>
+        <div class="value" id="lineOffset">—</div>
+      </div>
+      <div class="metric">
+        <label>Lookahead 오프셋</label>
+        <div class="value" id="lookOffset">—</div>
+      </div>
+      <div class="metric">
+        <label>라인 검출</label>
+        <div class="value" id="lineDetected">—</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>제어</h2>
+      <div class="metric">
+        <label>조향 <span id="steerVal">0</span></label>
+        <div class="bar"><div id="steerBar" class="bar-fill steer" style="width:50%"></div></div>
+      </div>
+      <div class="metric">
+        <label>스로틀 <span id="throttleVal">0</span></label>
+        <div class="bar"><div id="throttleBar" class="bar-fill throttle" style="width:0%"></div></div>
+      </div>
+      <div class="metric">
+        <label>전방 장애물</label>
+        <div class="value" id="obstacle">—</div>
+      </div>
+      <div class="metric">
+        <label>Heading 오차</label>
+        <div class="value" id="headingErr">—</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>IMU (9축)</h2>
+      <div class="compass">
+        <div id="needle" class="compass-needle"></div>
+      </div>
+      <div class="compass-label" id="headingLabel">—°</div>
+      <div class="metric" style="margin-top:0.75rem">
+        <label>Roll / Pitch / Yaw rate</label>
+        <div class="value" id="attitude">—</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>시스템</h2>
+      <div class="metric">
+        <label>가동 시간</label>
+        <div class="value" id="uptime">—</div>
+      </div>
+      <div class="errors" id="errors"></div>
+    </div>
+  </div>
+
+  <footer>zerodriver dashboard · SSE <code>/api/events</code></footer>
+
+  <script>
+    const $ = id => document.getElementById(id);
+
+    function pctSteer(v) {
+      return ((v + 1) / 2 * 100).toFixed(1);
+    }
+
+    function offsetX(off) {
+      return ((off + 1) / 2 * 100).toFixed(1);
+    }
+
+    function fmtDist(cm) {
+      if (cm >= 900) return '없음';
+      return cm.toFixed(0) + ' cm';
+    }
+
+    function fmtUptime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return m + 'm ' + s + 's';
+    }
+
+    function apply(s) {
+      $('mode').textContent = s.mode || '—';
+      const st = $('state');
+      st.textContent = s.state;
+      st.className = 'badge ' + s.state;
+
+      $('lineOffset').textContent = s.line_offset.toFixed(3);
+      $('lookOffset').textContent = s.lookahead_offset.toFixed(3);
+      $('lineDetected').textContent = s.line_detected ? '검출됨' : '없음';
+      $('dotBottom').style.left = offsetX(s.line_offset) + '%';
+      $('dotLook').style.left = offsetX(s.lookahead_offset) + '%';
+
+      $('steerVal').textContent = s.steering.toFixed(2);
+      $('steerBar').style.width = pctSteer(s.steering) + '%';
+      $('throttleVal').textContent = s.throttle.toFixed(2);
+      $('throttleBar').style.width = (s.throttle * 100).toFixed(1) + '%';
+      $('obstacle').textContent = fmtDist(s.front_distance_cm);
+      $('headingErr').textContent = s.heading_error_deg.toFixed(1) + '°';
+
+      $('needle').style.transform = 'rotate(' + s.heading + 'deg)';
+      $('headingLabel').textContent = s.heading.toFixed(1) + '°' + (s.has_mag ? ' (mag)' : '');
+      $('attitude').textContent =
+        s.roll.toFixed(1) + '° / ' + s.pitch.toFixed(1) + '° / ' + s.yaw_rate.toFixed(1) + '°/s';
+
+      $('uptime').textContent = fmtUptime(s.uptime_sec);
+      $('errors').innerHTML =
+        '<span>cam: <span class="' + (s.cam_errors ? 'err' : '') + '">' + s.cam_errors + '</span></span>' +
+        '<span>imu: <span class="' + (s.imu_errors ? 'err' : '') + '">' + s.imu_errors + '</span></span>' +
+        '<span>lidar: <span class="' + (s.lidar_errors ? 'err' : '') + '">' + s.lidar_errors + '</span></span>';
+
+      $('conn').textContent = 'live';
+      $('conn').className = 'conn live';
+    }
+
+    const es = new EventSource('/api/events');
+    es.addEventListener('status', e => {
+      try { apply(JSON.parse(e.data)); } catch (_) {}
+    });
+    es.onerror = () => {
+      $('conn').textContent = '끊김';
+      $('conn').className = 'conn off';
+    };
+
+    setInterval(() => {
+      $('camera').src = '/api/camera.jpg?t=' + Date.now();
+    }, 500);
+  </script>
+</body>
+</html>

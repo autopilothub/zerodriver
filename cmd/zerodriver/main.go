@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync/atomic"
@@ -17,6 +18,7 @@ import (
 	"github.com/autopilothub/zerodriver/internal/hal"
 	"github.com/autopilothub/zerodriver/internal/perception"
 	"github.com/autopilothub/zerodriver/internal/telemetry"
+	"github.com/autopilothub/zerodriver/internal/web"
 )
 
 func main() {
@@ -46,10 +48,13 @@ func main() {
 	}
 	defer pub.Close()
 
-	lineDetector := perception.NewLineDetector(cfg.Camera.Width, cfg.Camera.Height, cfg.Camera.ROIY, cfg.Camera.LineThreshold)
+	lineDetector := perception.NewLineDetector(
+		cfg.Camera.Width, cfg.Camera.Height, cfg.Camera.ROIY,
+		cfg.Camera.LookaheadRows, cfg.Camera.LineThreshold,
+	)
 	imuReader := perception.NewIMUReader(devices.IMU)
 	lidarParser := perception.NewLidarParser(devices.Lidar)
-	fuser := fusion.New()
+	fuser := fusion.NewWithHeadingLock(cfg.Control.IMUFusion.HeadingLockOffset)
 	ctrl := control.NewController(cfg, devices.Motor)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -73,6 +78,25 @@ func main() {
 	}()
 
 	log.Printf("zerodriver starting (mode=%s, loop=%dHz)", cfg.Mode, cfg.Control.LoopHz)
+
+	var statusStore *web.Store
+	if cfg.Web.Enabled {
+		statusStore = web.NewStore()
+		webSrv := web.NewServer(&cfg.Web, statusStore)
+		go func() {
+			log.Printf("web dashboard http://localhost%s", cfg.Web.Addr)
+			if err := webSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Printf("web server error: %v", err)
+			}
+		}()
+		defer func() {
+			shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancelShutdown()
+			_ = webSrv.Shutdown(shutdownCtx)
+		}()
+	}
+
+	startedAt := time.Now()
 
 	if err := ctrl.Arm(ctx); err != nil {
 		log.Fatalf("ESC arm: %v", err)
@@ -107,6 +131,9 @@ func main() {
 				log.Printf("camera error (#%d): %v", n, err)
 			}
 			return
+		}
+		if statusStore != nil {
+			statusStore.SetFrame(frame, cfg.Camera.Width, cfg.Camera.Height)
 		}
 		pos := lineDetector.Detect(frame)
 		send(lineCh, pos)
@@ -151,6 +178,20 @@ func main() {
 		case <-ticker.C:
 			fused := fuser.Fuse(lastLine, lastAtt, lastObs, ctrl.State())
 			lastCmd = ctrl.Tick(fused, interval.Seconds())
+
+			if statusStore != nil {
+				statusStore.Update(web.UpdateInput{
+					Mode:        cfg.Mode,
+					State:       ctrl.State(),
+					Fused:       fused,
+					Command:     lastCmd,
+					Attitude:    lastAtt,
+					CamErrors:   camErrors.Load(),
+					IMUErrors:   imuErrors.Load(),
+					LidarErrors: lidarErrors.Load(),
+					StartedAt:   startedAt,
+				})
+			}
 
 			if *verbose {
 				log.Printf("state=%s line=%.2f steering=%.2f throttle=%.2f obstacle=%.0fcm",

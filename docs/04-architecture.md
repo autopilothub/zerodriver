@@ -68,7 +68,8 @@ type Motor interface {
 | AVOIDING | 0.0 | 0.0 | 1.0 |
 
 ### `internal/control`
-- `PIDController`: steering/throttle 계산
+- `PurePursuit`: lookahead 라인 오프셋 → steering
+- `PIDController`: 9축 heading 보정 / 라인 유실 시 방향 유지
 - `StateMachine`: RaceState 전이
 - `MotorDriver`: ControlCommand → HAL Motor
 
@@ -89,17 +90,23 @@ main goroutine
 ## 제어 루프
 
 ```
-1. fusionLoop: lineCh, imuCh, lidarCh에서 읽기
-2. StateMachine.Update(obstacle) → state
-3. Fusion.Fuse(line, imu, lidar, state) → FusedInput
-4. PID.Compute(FusedInput) → ControlCommand
-5. Motor.Drive(cmd.Steering, cmd.Throttle)
+1. LineDetector: bottom ROI + lookahead ROI → offset, lookahead_offset
+2. Fusion: Pure Pursuit 타겟 + BNO085 heading/yaw 융합 → FusedInput
+3. StateTracing:
+   - 라인 검출: steering = PurePursuit(lookahead) + IMU heading 보정 + yaw 감쇠
+   - 라인 유실: steering = PID(heading_error)  ← 9축 기준 방향 유지
+4. Motor.Drive(steering, throttle)
 ```
 
-## PID 구조
+## Pure Pursuit + 9축 IMU
 
-**Steering PID** (입력: line offset -1~+1, 출력: steering -1~+1)
-- Kp=0.8, Ki=0.01, Kd=0.05 (시작값, `configs/zerodriver.yaml`)
+**Pure Pursuit** (`control.pure_pursuit`)
+- 카메라 lookahead 행의 라인 오프셋으로 조향각 계산
+- `lookahead`: 0.35 (정규화 전방 거리), `gain`: 1.0
+
+**9축 IMU** (`control.imu_fusion`, BNO085 `heading`/`gyroZ`)
+- 라인 추종 중: heading 기준 잠금 + yaw rate 감쇠
+- 라인 유실: 잠금된 heading으로 PID 방향 유지
 
 **Throttle**
 - 기본 `base_speed` (0.0~1.0)

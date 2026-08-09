@@ -9,9 +9,11 @@ import (
 	"github.com/autopilothub/zerodriver/internal/hal"
 )
 
-// Controller orchestrates PID, state machine, and motor output.
+// Controller orchestrates Pure Pursuit, IMU fusion, and motor output.
 type Controller struct {
-	pid          *PIDController
+	purePursuit  *PurePursuit
+	headingPID   *PIDController
+	lineLostPID  *PIDController
 	stateMachine *StateMachine
 	motor        hal.Motor
 	cfg          *config.Config
@@ -19,7 +21,13 @@ type Controller struct {
 
 func NewController(cfg *config.Config, motor hal.Motor) *Controller {
 	return &Controller{
-		pid:          NewPID(cfg.PID.Steering),
+		purePursuit:  NewPurePursuit(cfg.Control.PurePursuit.Lookahead, cfg.Control.PurePursuit.Gain),
+		headingPID:   NewPID(cfg.PID.Steering),
+		lineLostPID:  NewPID(config.PIDGains{
+			Kp: cfg.Control.IMUFusion.LineLostHeadingKp,
+			Ki: cfg.PID.Steering.Ki,
+			Kd: cfg.PID.Steering.Kd,
+		}),
 		stateMachine: NewStateMachine(cfg.Obstacle.StopDistanceCM),
 		motor:        motor,
 		cfg:          cfg,
@@ -59,10 +67,11 @@ func (c *Controller) Tick(input domain.FusedInput, dt float64) domain.ControlCom
 	switch state {
 	case domain.StateAvoiding, domain.StateStopped:
 		cmd = domain.ControlCommand{Steering: 0, Throttle: 0}
-		c.pid.Reset()
+		c.headingPID.Reset()
+		c.lineLostPID.Reset()
 
 	case domain.StateTracing:
-		steering := c.pid.Compute(input.LineOffset+input.YawCorrection, dt)
+		steering := c.computeSteering(input, dt)
 		throttle := c.cfg.Control.BaseSpeed
 		if !input.LineDetected {
 			throttle = c.cfg.Control.LineLostSpeed
@@ -80,6 +89,23 @@ func (c *Controller) Tick(input domain.FusedInput, dt float64) domain.ControlCom
 
 	c.applyMotor(cmd)
 	return cmd
+}
+
+func (c *Controller) computeSteering(input domain.FusedInput, dt float64) float64 {
+	imu := c.cfg.Control.IMUFusion
+	yawDamp := -imu.YawDamping * input.YawRate
+
+	if input.LineDetected {
+		pp := c.purePursuit.Steering(input.LookaheadOffset)
+		headingErrNorm := input.HeadingError / 45.0
+		imuCorr := imu.HeadingKp*headingErrNorm + yawDamp
+		return clamp(pp+imuCorr, -1, 1)
+	}
+
+	// Line lost: hold reference heading from 9-axis IMU.
+	headingErrNorm := input.HeadingError / 45.0
+	hold := c.lineLostPID.Compute(headingErrNorm, dt) + yawDamp
+	return clamp(hold, -1, 1)
 }
 
 func (c *Controller) State() domain.RaceState {

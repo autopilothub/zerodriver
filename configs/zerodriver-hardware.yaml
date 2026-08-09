@@ -7,6 +7,14 @@ control:
   corner_threshold: 0.5
   line_lost_speed: 0.2
   esc_arm_delay_sec: 2
+  pure_pursuit:
+    lookahead: 0.35
+    gain: 1.0
+  imu_fusion:
+    heading_kp: 0.03
+    yaw_damping: 0.015
+    line_lost_heading_kp: 0.06
+    heading_lock_offset: 0.15
 
 pid:
   steering:
@@ -22,6 +30,7 @@ camera:
   width: 320
   height: 240
   roi_y: 160
+  lookahead_rows: 40
   line_threshold: 100
 
 hardware:
@@ -49,3 +58,9 @@ telemetry:
   topic: zerodriver/telemetry
   interval_sec: 1
   cert_dir: /etc/zerodriver/certs
+
+web:
+  enabled: true
+  addr: ":8080"
+  refresh_ms: 200
+  camera_quality: 70

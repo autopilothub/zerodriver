@@ -15,15 +15,30 @@ type Config struct {
 	Camera    CameraConfig    `yaml:"camera"`
 	Hardware  HardwareConfig  `yaml:"hardware"`
 	Telemetry TelemetryConfig `yaml:"telemetry"`
+	Web       WebConfig       `yaml:"web"`
 }
 
 type ControlConfig struct {
-	LoopHz           int     `yaml:"loop_hz"`
-	BaseSpeed        float64 `yaml:"base_speed"`
-	CornerSpeed      float64 `yaml:"corner_speed"`
-	CornerThreshold  float64 `yaml:"corner_threshold"`
-	LineLostSpeed    float64 `yaml:"line_lost_speed"`
-	ESCArmDelaySec   int     `yaml:"esc_arm_delay_sec"`
+	LoopHz          int              `yaml:"loop_hz"`
+	BaseSpeed       float64          `yaml:"base_speed"`
+	CornerSpeed     float64          `yaml:"corner_speed"`
+	CornerThreshold float64          `yaml:"corner_threshold"`
+	LineLostSpeed   float64          `yaml:"line_lost_speed"`
+	ESCArmDelaySec  int              `yaml:"esc_arm_delay_sec"`
+	PurePursuit     PurePursuitConfig `yaml:"pure_pursuit"`
+	IMUFusion       IMUFusionConfig   `yaml:"imu_fusion"`
+}
+
+type PurePursuitConfig struct {
+	Lookahead float64 `yaml:"lookahead"` // normalized forward distance (0–1)
+	Gain      float64 `yaml:"gain"`
+}
+
+type IMUFusionConfig struct {
+	HeadingKp         float64 `yaml:"heading_kp"`           // heading error → steering (line follow)
+	YawDamping        float64 `yaml:"yaw_damping"`          // gyro Z damping
+	LineLostHeadingKp float64 `yaml:"line_lost_heading_kp"` // heading hold when line lost
+	HeadingLockOffset float64 `yaml:"heading_lock_offset"`  // |line offset| below this locks heading ref
 }
 
 type PIDConfig struct {
@@ -45,7 +60,8 @@ type CameraConfig struct {
 	Width          int `yaml:"width"`
 	Height         int `yaml:"height"`
 	ROIY           int `yaml:"roi_y"`
-	LineThreshold  int `yaml:"line_threshold"` // RGB sum below = line pixel
+	LookaheadRows  int `yaml:"lookahead_rows"` // rows above roi_y for Pure Pursuit target
+	LineThreshold  int `yaml:"line_threshold"`
 }
 
 type HardwareConfig struct {
@@ -74,6 +90,13 @@ type TelemetryConfig struct {
 	Topic       string `yaml:"topic"`
 	IntervalSec int    `yaml:"interval_sec"`
 	CertDir     string `yaml:"cert_dir"`
+}
+
+type WebConfig struct {
+	Enabled        bool   `yaml:"enabled"`
+	Addr           string `yaml:"addr"`
+	RefreshMS      int    `yaml:"refresh_ms"`
+	CameraQuality  int    `yaml:"camera_quality"`
 }
 
 func Load(path string) (*Config, error) {
@@ -108,6 +131,24 @@ func (c *Config) applyDefaults() {
 	if c.Control.ESCArmDelaySec == 0 {
 		c.Control.ESCArmDelaySec = 2
 	}
+	if c.Control.PurePursuit.Lookahead == 0 {
+		c.Control.PurePursuit.Lookahead = 0.35
+	}
+	if c.Control.PurePursuit.Gain == 0 {
+		c.Control.PurePursuit.Gain = 1.0
+	}
+	if c.Control.IMUFusion.HeadingKp == 0 {
+		c.Control.IMUFusion.HeadingKp = 0.03
+	}
+	if c.Control.IMUFusion.YawDamping == 0 {
+		c.Control.IMUFusion.YawDamping = 0.015
+	}
+	if c.Control.IMUFusion.LineLostHeadingKp == 0 {
+		c.Control.IMUFusion.LineLostHeadingKp = 0.06
+	}
+	if c.Control.IMUFusion.HeadingLockOffset == 0 {
+		c.Control.IMUFusion.HeadingLockOffset = 0.15
+	}
 	if c.PID.Steering.Kp == 0 {
 		c.PID.Steering.Kp = 0.8
 	}
@@ -125,6 +166,9 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Camera.ROIY == 0 {
 		c.Camera.ROIY = 160
+	}
+	if c.Camera.LookaheadRows == 0 {
+		c.Camera.LookaheadRows = 40
 	}
 	if c.Camera.LineThreshold == 0 {
 		c.Camera.LineThreshold = 100
@@ -187,5 +231,14 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Telemetry.Topic == "" {
 		c.Telemetry.Topic = "zerodriver/telemetry"
+	}
+	if c.Web.Addr == "" {
+		c.Web.Addr = ":8080"
+	}
+	if c.Web.RefreshMS == 0 {
+		c.Web.RefreshMS = 200
+	}
+	if c.Web.CameraQuality == 0 {
+		c.Web.CameraQuality = 70
 	}
 }

@@ -29,8 +29,9 @@ func TestController_TracingDrivesMotor(t *testing.T) {
 		Control: config.ControlConfig{
 			BaseSpeed:       0.6,
 			CornerSpeed:     0.3,
-			CornerThreshold: 0.5,
+			CornerThreshold: 1.0,
 			LineLostSpeed:   0.2,
+			PurePursuit:     config.PurePursuitConfig{Lookahead: 0.35, Gain: 1.0},
 		},
 		PID: config.PIDConfig{Steering: config.PIDGains{Kp: 0.8}},
 		Obstacle: config.ObstacleConfig{StopDistanceCM: 20},
@@ -39,10 +40,11 @@ func TestController_TracingDrivesMotor(t *testing.T) {
 	ctrl.Start()
 
 	input := domain.FusedInput{
-		LineOffset:    0.5,
-		LineDetected:  true,
-		FrontDistance: 999,
-		State:         domain.StateTracing,
+		LineOffset:      0.2,
+		LookaheadOffset: 0.2,
+		LineDetected:    true,
+		FrontDistance:   999,
+		State:           domain.StateTracing,
 	}
 	cmd := ctrl.Tick(input, 0.02)
 
@@ -73,7 +75,8 @@ func TestController_LineLostReducesThrottle(t *testing.T) {
 
 	input := domain.FusedInput{
 		LineDetected:  false,
-		LineOffset:    0.1,
+		HeadingError:  10,
+		YawRate:       0,
 		FrontDistance: 999,
 	}
 	cmd := ctrl.Tick(input, 0.02)

@@ -30,9 +30,10 @@ func (s RaceState) String() string {
 // LinePosition is the detected line offset normalized to [-1.0, +1.0].
 // Negative = line is to the left, positive = to the right.
 type LinePosition struct {
-	Offset    float64
-	Detected  bool
-	Timestamp time.Time
+	Offset           float64 // centroid at bottom ROI
+	LookaheadOffset  float64 // centroid at lookahead row (for Pure Pursuit)
+	Detected         bool
+	Timestamp        time.Time
 }
 
 // Attitude holds IMU orientation data in degrees.
@@ -70,11 +71,13 @@ type PerceptionSnapshot struct {
 	State    RaceState
 }
 
-// FusedInput is the output of sensor fusion, fed into the PID controller.
+// FusedInput is the output of sensor fusion, fed into the controller.
 type FusedInput struct {
-	LineOffset    float64
-	LineDetected  bool
-	YawCorrection float64
-	FrontDistance float64
-	State         RaceState
+	LineOffset      float64
+	LookaheadOffset float64 // Pure Pursuit lateral error at lookahead
+	LineDetected    bool
+	HeadingError    float64 // degrees: reference heading − current (9-axis)
+	YawRate         float64 // deg/s (gyro Z)
+	FrontDistance   float64
+	State           RaceState
 }
