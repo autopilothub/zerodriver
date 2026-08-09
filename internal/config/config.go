@@ -121,6 +121,18 @@ func (c *Config) LidarEnabled() bool {
 	return *c.Hardware.LidarEnabled
 }
 
+// ApplyLidarOverride sets lidar_enabled from a CLI value ("on"/"off", etc.).
+func (c *Config) ApplyLidarOverride(v string) {
+	switch v {
+	case "off", "false", "0", "no":
+		enabled := false
+		c.Hardware.LidarEnabled = &enabled
+	case "on", "true", "1", "yes":
+		enabled := true
+		c.Hardware.LidarEnabled = &enabled
+	}
+}
+
 func (c *Config) applyDefaults() {
 	if c.Control.LoopHz == 0 {
 		c.Control.LoopHz = 50

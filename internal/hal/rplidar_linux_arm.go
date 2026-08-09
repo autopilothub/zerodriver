@@ -68,18 +68,29 @@ func (r *RPLidar) startScan() error {
 	if _, err := r.port.Write(reset); err != nil {
 		return fmt.Errorf("send RESET: %w", err)
 	}
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(800 * time.Millisecond)
 	_ = r.port.ResetInputBuffer()
 
 	cmd := []byte{rplidarSyncByte, rplidarCmdScan}
-	if _, err := r.port.Write(cmd); err != nil {
-		return fmt.Errorf("send SCAN: %w", err)
-	}
-
+	var n int
+	var err error
 	header := make([]byte, rplidarHeaderLen)
-	n, err := r.port.Read(header)
-	if err != nil || n < rplidarHeaderLen {
+	for attempt := 0; attempt < 5; attempt++ {
+		if _, err = r.port.Write(cmd); err != nil {
+			return fmt.Errorf("send SCAN: %w", err)
+		}
+		n, err = r.port.Read(header)
+		if err == nil && n >= rplidarHeaderLen {
+			break
+		}
+		time.Sleep(300 * time.Millisecond)
+		_ = r.port.ResetInputBuffer()
+	}
+	if err != nil {
 		return fmt.Errorf("read scan header: %w (got %d bytes)", err, n)
+	}
+	if n < rplidarHeaderLen {
+		return fmt.Errorf("read scan header: short read (got %d/%d bytes); check LiDAR power and USB connection", n, rplidarHeaderLen)
 	}
 	if header[0] != rplidarSyncByte || header[1] != 0x5A {
 		return fmt.Errorf("invalid scan header: %02X %02X", header[0], header[1])

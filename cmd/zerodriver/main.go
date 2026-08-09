@@ -24,6 +24,7 @@ import (
 func main() {
 	configPath := flag.String("config", "configs/zerodriver.yaml", "path to config file")
 	mode := flag.String("mode", "", "override mode: mock or hardware")
+	lidar := flag.String("lidar", "", "override lidar: on or off")
 	verbose := flag.Bool("v", false, "verbose logging")
 	duration := flag.Duration("duration", 0, "run duration (0 = until signal)")
 	flag.Parse()
@@ -35,6 +36,7 @@ func main() {
 	if *mode != "" {
 		cfg.Mode = *mode
 	}
+	cfg.ApplyLidarOverride(*lidar)
 
 	devices, err := hal.NewDevices(cfg)
 	if err != nil {
