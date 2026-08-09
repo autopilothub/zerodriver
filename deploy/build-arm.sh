@@ -2,7 +2,7 @@
 set -euo pipefail
 
 OUTPUT_DIR="bin"
-TARGETS=(zerodriver imutest camtest motortest lidartest hwtest pcatest)
+TARGETS=(zerodriver imutest camtest motortest lidartest hwtest pcatest caltest)
 
 mkdir -p "$OUTPUT_DIR"
 

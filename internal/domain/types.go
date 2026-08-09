@@ -38,15 +38,19 @@ type LinePosition struct {
 
 // Attitude holds IMU orientation data in degrees.
 type Attitude struct {
-	Yaw     float64
-	Pitch   float64
-	Roll    float64
-	GyroZ   float64 // yaw rate deg/s
-	MagX    float64 // µT (MPU-9250 AK8963 only)
-	MagY    float64
-	MagZ    float64
-	Heading float64 // compass heading 0-360° (magnetometer)
-	HasMag  bool
+	Yaw      float64
+	Pitch    float64
+	Roll     float64
+	GyroZ    float64 // yaw rate deg/s
+	AccelX   float64 // m/s² body frame (BNO085)
+	AccelY   float64
+	AccelZ   float64
+	HasAccel bool
+	MagX     float64 // µT (MPU-9250 AK8963 only)
+	MagY     float64
+	MagZ     float64
+	Heading  float64 // compass heading 0-360° (magnetometer)
+	HasMag   bool
 }
 
 // ObstacleScan holds LiDAR distance readings.

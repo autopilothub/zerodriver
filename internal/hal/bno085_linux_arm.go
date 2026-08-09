@@ -56,6 +56,7 @@ func NewBNO085(busName string, addr int) (*BNO085, error) {
 		bno08x.SensorReportRotationVector,
 		bno08x.SensorReportGyroscope,
 		bno08x.SensorReportMagnetometer,
+		bno08x.SensorReportAccelerometer,
 	} {
 		if err := sensor.EnableFeature(feature, bno085ReportIntervalUs); err != nil {
 			transport.Close()
@@ -132,6 +133,10 @@ func (b *BNO085) buildAttitude() domain.Attitude {
 
 	if gyro, ok := b.sensor.GetGyroscope(); ok {
 		att.GyroZ = gyro[2] * 180 / math.Pi
+	}
+	if accel, ok := b.sensor.GetAccelerometer(); ok {
+		att.AccelX, att.AccelY, att.AccelZ = accel[0], accel[1], accel[2]
+		att.HasAccel = true
 	}
 	if mag, ok := b.sensor.GetMagnetometer(); ok {
 		att.MagX, att.MagY, att.MagZ = mag[0], mag[1], mag[2]

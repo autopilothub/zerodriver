@@ -28,7 +28,7 @@ fi
 
 # Install binaries if present
 mkdir -p "$INSTALL_DIR"
-for bin in zerodriver hwtest imutest camtest motortest lidartest pcatest; do
+for bin in zerodriver hwtest imutest camtest motortest lidartest pcatest caltest; do
   if [ -f "${bin}-armv6" ]; then
     cp "${bin}-armv6" "$INSTALL_DIR/$bin"
     chmod +x "$INSTALL_DIR/$bin"
