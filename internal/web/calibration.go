@@ -44,8 +44,9 @@ type CalibrationHooks struct {
 	ThrottleForwardStartUs int
 	ThrottleReverseStartUs int
 	NeutralUs              int
-	MaxUs                  int
-	ReverseUs              int
+	ForwardEndUs           int
+	ReverseEndUs           int
+	Inverted               bool
 }
 
 // SetCalibrationHooks provides motor/IMU access for web-triggered calibration.
@@ -169,10 +170,11 @@ func (s *Store) StartCalibration(typ CalibrationType) error {
 				hooks.ReadIMU,
 				calibration.DeadzoneConfig{
 					NeutralUs:      hooks.NeutralUs,
-					MaxUs:          hooks.MaxUs,
-					ReverseUs:      hooks.ReverseUs,
+					ForwardEndUs:   hooks.ForwardEndUs,
+					ReverseEndUs:   hooks.ReverseEndUs,
 					ForwardStartUs: hooks.ThrottleForwardStartUs,
 					ReverseStartUs: hooks.ThrottleReverseStartUs,
+					Inverted:       hooks.Inverted,
 				},
 				calibration.DeadzoneOptions{
 					OnProgress: s.setCalibrationProgress,

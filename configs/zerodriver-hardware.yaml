@@ -55,12 +55,14 @@ hardware:
   servo_max_us: 2000
   servo_trim_us: 0
   steering_invert: false
-  throttle_map: bidirectional   # linear | neutral_forward | bidirectional
-  throttle_min_us: 1500         # neutral/stop
-  throttle_reverse_us: 1000
-  throttle_max_us: 2000
-  throttle_forward_start_us: 1580  # ESC 데드존 보정 (안 움직이면 1600~1650)
-  throttle_reverse_start_us: 1420  # 후진 데드존 (bidirectional)
+  throttle_map: bidirectional_inverted
+  throttle_neutral_us: 1560       # 중립
+  throttle_forward_us: 1000       # 전진 최대 (낮은 펄스)
+  throttle_reverse_us: 2000       # 후진 최대 (높은 펄스)
+  throttle_min_us: 1000           # 펄스 하한
+  throttle_max_us: 2000           # 펄스 상한
+  throttle_forward_start_us: 1450 # 전진 데드존 (이보다 낮아야 전진)
+  throttle_reverse_start_us: 1800 # 후진 데드존 (이보다 높아야 후진)
   throttle_trim_us: 0
 
 telemetry:

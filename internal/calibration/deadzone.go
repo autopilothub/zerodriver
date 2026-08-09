@@ -11,10 +11,11 @@ type SetThrottleUS func(us int) error
 // DeadzoneConfig holds ESC pulse limits for deadzone sweep.
 type DeadzoneConfig struct {
 	NeutralUs      int
-	MaxUs          int
-	ReverseUs      int
+	ForwardEndUs   int // pulse at full forward
+	ReverseEndUs   int // pulse at full reverse
 	ForwardStartUs int
 	ReverseStartUs int
+	Inverted       bool // forward=low pulse, reverse=high pulse
 }
 
 // DeadzoneResult holds suggested ESC deadzone values.
@@ -31,7 +32,7 @@ type DeadzoneOptions struct {
 	SampleInterval time.Duration
 	SamplesPerStep int
 	MinAccel       float64 // m/s² on body X
-	MarginUs       int     // added to forward / subtracted from reverse threshold
+	MarginUs       int
 	OnProgress     func(phase string, pulseUs int)
 }
 
@@ -59,7 +60,6 @@ func (o DeadzoneOptions) withDefaults() DeadzoneOptions {
 }
 
 // RunDeadzone sweeps ESC pulse from neutral to find forward/reverse deadzones.
-// The vehicle must be on the ground with room to roll slightly.
 func RunDeadzone(setUS SetThrottleUS, read ReadIMU, cfg DeadzoneConfig, opts DeadzoneOptions) (DeadzoneResult, error) {
 	opts = opts.withDefaults()
 	res := DeadzoneResult{
@@ -70,11 +70,19 @@ func RunDeadzone(setUS SetThrottleUS, read ReadIMU, cfg DeadzoneConfig, opts Dea
 	if cfg.NeutralUs == 0 {
 		cfg.NeutralUs = 1500
 	}
-	if cfg.MaxUs == 0 {
-		cfg.MaxUs = 2000
+	if cfg.ForwardEndUs == 0 {
+		if cfg.Inverted {
+			cfg.ForwardEndUs = 1000
+		} else {
+			cfg.ForwardEndUs = 2000
+		}
 	}
-	if cfg.ReverseUs == 0 {
-		cfg.ReverseUs = 1000
+	if cfg.ReverseEndUs == 0 {
+		if cfg.Inverted {
+			cfg.ReverseEndUs = 2000
+		} else {
+			cfg.ReverseEndUs = 1000
+		}
 	}
 
 	progress(opts, "prepare", cfg.NeutralUs)
@@ -102,63 +110,113 @@ func RunDeadzone(setUS SetThrottleUS, read ReadIMU, cfg DeadzoneConfig, opts Dea
 	_ = setUS(cfg.NeutralUs)
 
 	if fwdOK {
-		res.ThrottleForwardStartUs = fwdPulse + opts.MarginUs
-		if res.ThrottleForwardStartUs > cfg.MaxUs {
-			res.ThrottleForwardStartUs = cfg.MaxUs
+		if cfg.Inverted {
+			res.ThrottleForwardStartUs = fwdPulse - opts.MarginUs
+			if res.ThrottleForwardStartUs < cfg.ForwardEndUs {
+				res.ThrottleForwardStartUs = cfg.ForwardEndUs
+			}
+		} else {
+			res.ThrottleForwardStartUs = fwdPulse + opts.MarginUs
+			if res.ThrottleForwardStartUs > cfg.ForwardEndUs {
+				res.ThrottleForwardStartUs = cfg.ForwardEndUs
+			}
 		}
 		res.Notes = append(res.Notes, fmt.Sprintf("forward deadzone at %dµs → throttle_forward_start_us: %d", fwdPulse, res.ThrottleForwardStartUs))
 	} else {
-		res.Notes = append(res.Notes, fmt.Sprintf("no forward movement detected (%d–%dµs) — check ESC arm / wiring", cfg.NeutralUs, cfg.MaxUs))
+		lo, hi := cfg.forwardSweepRange()
+		res.Notes = append(res.Notes, fmt.Sprintf("no forward movement detected (%d–%dµs)", lo, hi))
 	}
 
 	if revOK {
-		res.ThrottleReverseStartUs = revPulse - opts.MarginUs
-		if res.ThrottleReverseStartUs < cfg.ReverseUs {
-			res.ThrottleReverseStartUs = cfg.ReverseUs
+		if cfg.Inverted {
+			res.ThrottleReverseStartUs = revPulse + opts.MarginUs
+			if res.ThrottleReverseStartUs > cfg.ReverseEndUs {
+				res.ThrottleReverseStartUs = cfg.ReverseEndUs
+			}
+		} else {
+			res.ThrottleReverseStartUs = revPulse - opts.MarginUs
+			if res.ThrottleReverseStartUs < cfg.ReverseEndUs {
+				res.ThrottleReverseStartUs = cfg.ReverseEndUs
+			}
 		}
 		res.Notes = append(res.Notes, fmt.Sprintf("reverse deadzone at %dµs → throttle_reverse_start_us: %d", revPulse, res.ThrottleReverseStartUs))
 	} else {
-		res.Notes = append(res.Notes, fmt.Sprintf("no reverse movement detected (%d–%dµs) — check throttle_map: bidirectional", cfg.ReverseUs, cfg.NeutralUs))
+		lo, hi := cfg.reverseSweepRange()
+		res.Notes = append(res.Notes, fmt.Sprintf("no reverse movement detected (%d–%dµs)", lo, hi))
 	}
 
 	progress(opts, "done", cfg.NeutralUs)
 	return res, nil
 }
 
+func (cfg DeadzoneConfig) forwardSweepRange() (int, int) {
+	if cfg.Inverted {
+		return cfg.ForwardEndUs, cfg.NeutralUs
+	}
+	return cfg.NeutralUs, cfg.ForwardEndUs
+}
+
+func (cfg DeadzoneConfig) reverseSweepRange() (int, int) {
+	if cfg.Inverted {
+		return cfg.NeutralUs, cfg.ReverseEndUs
+	}
+	return cfg.ReverseEndUs, cfg.NeutralUs
+}
+
 func sweepForward(setUS SetThrottleUS, read ReadIMU, cfg DeadzoneConfig, opts DeadzoneOptions, baseline float64) (int, bool) {
-	for pulse := cfg.NeutralUs + opts.StepUs; pulse <= cfg.MaxUs; pulse += opts.StepUs {
-		progress(opts, "forward", pulse)
-		if err := setUS(pulse); err != nil {
-			return 0, false
+	if cfg.Inverted {
+		for pulse := cfg.NeutralUs - opts.StepUs; pulse >= cfg.ForwardEndUs; pulse -= opts.StepUs {
+			if found, ok := probePulse(setUS, read, opts, baseline, "forward", pulse, true); ok {
+				return found, true
+			}
 		}
-		time.Sleep(opts.HoldDuration)
-		accel, ok, err := avgAccelX(read, opts.SampleInterval, opts.SamplesPerStep)
-		if err != nil || !ok {
-			continue
-		}
-		if accel-baseline >= opts.MinAccel || accel >= opts.MinAccel {
-			progress(opts, "forward_found", pulse)
-			return pulse, true
+		return 0, false
+	}
+	for pulse := cfg.NeutralUs + opts.StepUs; pulse <= cfg.ForwardEndUs; pulse += opts.StepUs {
+		if found, ok := probePulse(setUS, read, opts, baseline, "forward", pulse, true); ok {
+			return found, true
 		}
 	}
 	return 0, false
 }
 
 func sweepReverse(setUS SetThrottleUS, read ReadIMU, cfg DeadzoneConfig, opts DeadzoneOptions, baseline float64) (int, bool) {
-	for pulse := cfg.NeutralUs - opts.StepUs; pulse >= cfg.ReverseUs; pulse -= opts.StepUs {
-		progress(opts, "reverse", pulse)
-		if err := setUS(pulse); err != nil {
-			return 0, false
+	if cfg.Inverted {
+		for pulse := cfg.NeutralUs + opts.StepUs; pulse <= cfg.ReverseEndUs; pulse += opts.StepUs {
+			if found, ok := probePulse(setUS, read, opts, baseline, "reverse", pulse, false); ok {
+				return found, true
+			}
 		}
-		time.Sleep(opts.HoldDuration)
-		accel, ok, err := avgAccelX(read, opts.SampleInterval, opts.SamplesPerStep)
-		if err != nil || !ok {
-			continue
+		return 0, false
+	}
+	for pulse := cfg.NeutralUs - opts.StepUs; pulse >= cfg.ReverseEndUs; pulse -= opts.StepUs {
+		if found, ok := probePulse(setUS, read, opts, baseline, "reverse", pulse, false); ok {
+			return found, true
 		}
-		if baseline-accel >= opts.MinAccel || accel <= -opts.MinAccel {
-			progress(opts, "reverse_found", pulse)
+	}
+	return 0, false
+}
+
+func probePulse(setUS SetThrottleUS, read ReadIMU, opts DeadzoneOptions, baseline float64, phase string, pulse int, forward bool) (int, bool) {
+	progress(opts, phase, pulse)
+	if err := setUS(pulse); err != nil {
+		return 0, false
+	}
+	time.Sleep(opts.HoldDuration)
+	accel, ok, err := avgAccelX(read, opts.SampleInterval, opts.SamplesPerStep)
+	if err != nil || !ok {
+		return 0, false
+	}
+	if forward {
+		if accel-baseline >= opts.MinAccel || accel >= opts.MinAccel {
+			progress(opts, phase+"_found", pulse)
 			return pulse, true
 		}
+		return 0, false
+	}
+	if baseline-accel >= opts.MinAccel || accel <= -opts.MinAccel {
+		progress(opts, phase+"_found", pulse)
+		return pulse, true
 	}
 	return 0, false
 }
@@ -189,22 +247,4 @@ func progress(opts DeadzoneOptions, phase string, pulse int) {
 	if opts.OnProgress != nil {
 		opts.OnProgress(phase, pulse)
 	}
-}
-
-// PulseForThrottle returns the ESC µs for diagnostics during deadzone tuning.
-func PulseForThrottle(throttle float64, neutral, maxUs, reverseUs, forwardStart, reverseStart int) int {
-	pulse := neutral
-	switch {
-	case throttle > 0:
-		pulse = neutral + int(float64(maxUs-neutral)*throttle)
-		if forwardStart > 0 && pulse < forwardStart {
-			pulse = forwardStart
-		}
-	case throttle < 0:
-		pulse = neutral + int(float64(neutral-reverseUs)*throttle)
-		if reverseStart > 0 && pulse > reverseStart {
-			pulse = reverseStart
-		}
-	}
-	return pulse
 }

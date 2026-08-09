@@ -86,13 +86,15 @@ type HardwareConfig struct {
 	ServoMaxUs        int  `yaml:"servo_max_us"`
 	ServoTrimUs       int  `yaml:"servo_trim_us"`       // µs offset at center (wheels left → increase)
 	SteeringInvert    bool `yaml:"steering_invert"`     // flip left/right if servo wired backwards
-	ThrottleMinUs         int    `yaml:"throttle_min_us"`          // stop/neutral or linear min
-	ThrottleMaxUs         int    `yaml:"throttle_max_us"`          // max forward
-	ThrottleReverseUs     int    `yaml:"throttle_reverse_us"`      // reverse pulse (bidirectional)
-	ThrottleTrimUs        int    `yaml:"throttle_trim_us"`         // µs offset on ESC pulse
-	ThrottleForwardStartUs int   `yaml:"throttle_forward_start_us"` // min µs when throttle > 0
-	ThrottleReverseStartUs int   `yaml:"throttle_reverse_start_us"` // max µs when throttle < 0 (bidirectional)
-	ThrottleMap           string `yaml:"throttle_map"`             // neutral_forward, linear, bidirectional
+	ThrottleMinUs          int    `yaml:"throttle_min_us"`           // pulse clamp min (also full forward on inverted ESC)
+	ThrottleMaxUs          int    `yaml:"throttle_max_us"`           // pulse clamp max (also full reverse on inverted ESC)
+	ThrottleNeutralUs      int    `yaml:"throttle_neutral_us"`       // ESC stop/neutral pulse
+	ThrottleForwardUs      int    `yaml:"throttle_forward_us"`       // full forward pulse (inverted ESC: low µs)
+	ThrottleReverseUs      int    `yaml:"throttle_reverse_us"`       // full reverse pulse (standard: low µs)
+	ThrottleTrimUs         int    `yaml:"throttle_trim_us"`          // µs offset on ESC pulse
+	ThrottleForwardStartUs int    `yaml:"throttle_forward_start_us"` // deadzone edge toward forward
+	ThrottleReverseStartUs int    `yaml:"throttle_reverse_start_us"` // deadzone edge toward reverse
+	ThrottleMap            string `yaml:"throttle_map"`              // linear, neutral_forward, bidirectional, bidirectional_inverted
 }
 
 type TelemetryConfig struct {
@@ -265,6 +267,8 @@ func (c *Config) applyDefaults() {
 	if c.Hardware.ThrottleMinUs == 0 {
 		if c.Hardware.ThrottleMap == "linear" {
 			c.Hardware.ThrottleMinUs = 1000
+		} else if c.Hardware.ThrottleMap == "bidirectional_inverted" {
+			c.Hardware.ThrottleMinUs = 1000
 		} else {
 			c.Hardware.ThrottleMinUs = 1500 // ESC neutral/stop
 		}
@@ -296,4 +300,39 @@ func (c *Config) applyDefaults() {
 	if c.Web.ManualTimeoutMS == 0 {
 		c.Web.ManualTimeoutMS = 500
 	}
+}
+
+// ThrottleInverted reports ESC with forward=low pulse and reverse=high pulse.
+func (h HardwareConfig) ThrottleInverted() bool {
+	return h.ThrottleMap == "bidirectional_inverted"
+}
+
+// ThrottleNeutral returns the ESC stop/neutral pulse width.
+func (h HardwareConfig) ThrottleNeutral() int {
+	if h.ThrottleNeutralUs > 0 {
+		return h.ThrottleNeutralUs
+	}
+	if h.ThrottleInverted() {
+		return 1560
+	}
+	return h.ThrottleMinUs
+}
+
+// ThrottleForwardEnd returns the pulse at full forward.
+func (h HardwareConfig) ThrottleForwardEnd() int {
+	if h.ThrottleInverted() {
+		if h.ThrottleForwardUs > 0 {
+			return h.ThrottleForwardUs
+		}
+		return h.ThrottleMinUs
+	}
+	return h.ThrottleMaxUs
+}
+
+// ThrottleReverseEnd returns the pulse at full reverse.
+func (h HardwareConfig) ThrottleReverseEnd() int {
+	if h.ThrottleInverted() {
+		return h.ThrottleMaxUs
+	}
+	return h.ThrottleReverseUs
 }

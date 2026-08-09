@@ -7,7 +7,7 @@ import (
 	"github.com/autopilothub/zerodriver/internal/domain"
 )
 
-func TestRunDeadzone_ForwardAndReverse(t *testing.T) {
+func TestRunDeadzone_Standard(t *testing.T) {
 	lastPulse := 1500
 	read := func() (domain.Attitude, error) {
 		var ax float64
@@ -24,13 +24,10 @@ func TestRunDeadzone_ForwardAndReverse(t *testing.T) {
 	}
 
 	res, err := RunDeadzone(setUS, read, DeadzoneConfig{
-		NeutralUs: 1500, MaxUs: 2000, ReverseUs: 1000,
+		NeutralUs: 1500, ForwardEndUs: 2000, ReverseEndUs: 1000,
 	}, DeadzoneOptions{
-		StepUs:         20,
-		HoldDuration:   10 * time.Millisecond,
-		SampleInterval: 5 * time.Millisecond,
-		SamplesPerStep: 2,
-		MarginUs:       5,
+		StepUs: 20, HoldDuration: 10 * time.Millisecond,
+		SampleInterval: 5 * time.Millisecond, SamplesPerStep: 2, MarginUs: 5,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -43,11 +40,35 @@ func TestRunDeadzone_ForwardAndReverse(t *testing.T) {
 	}
 }
 
-func TestPulseForThrottle_BidirectionalDeadband(t *testing.T) {
-	if got := PulseForThrottle(0.1, 1500, 2000, 1000, 1600, 1400); got != 1600 {
-		t.Fatalf("forward deadband: %d", got)
+func TestRunDeadzone_Inverted(t *testing.T) {
+	lastPulse := 1560
+	read := func() (domain.Attitude, error) {
+		var ax float64
+		if lastPulse <= 1450 {
+			ax = 0.4
+		} else if lastPulse >= 1800 {
+			ax = -0.4
+		}
+		return domain.Attitude{HasAccel: true, AccelX: ax}, nil
 	}
-	if got := PulseForThrottle(-0.1, 1500, 2000, 1000, 1600, 1400); got != 1400 {
-		t.Fatalf("reverse deadband: %d", got)
+	setUS := func(us int) error {
+		lastPulse = us
+		return nil
+	}
+
+	res, err := RunDeadzone(setUS, read, DeadzoneConfig{
+		NeutralUs: 1560, ForwardEndUs: 1000, ReverseEndUs: 2000, Inverted: true,
+	}, DeadzoneOptions{
+		StepUs: 10, HoldDuration: 10 * time.Millisecond,
+		SampleInterval: 5 * time.Millisecond, SamplesPerStep: 2, MarginUs: 5,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ThrottleForwardStartUs != 1445 {
+		t.Fatalf("forward start: %d", res.ThrottleForwardStartUs)
+	}
+	if res.ThrottleReverseStartUs != 1805 {
+		t.Fatalf("reverse start: %d", res.ThrottleReverseStartUs)
 	}
 }

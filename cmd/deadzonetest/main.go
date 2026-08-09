@@ -63,11 +63,12 @@ func main() {
 		motor.SetThrottleUS,
 		imu.Read,
 		calibration.DeadzoneConfig{
-			NeutralUs:      cfg.Hardware.ThrottleMinUs,
-			MaxUs:          cfg.Hardware.ThrottleMaxUs,
-			ReverseUs:      cfg.Hardware.ThrottleReverseUs,
+			NeutralUs:      cfg.Hardware.ThrottleNeutral(),
+			ForwardEndUs:   cfg.Hardware.ThrottleForwardEnd(),
+			ReverseEndUs:   cfg.Hardware.ThrottleReverseEnd(),
 			ForwardStartUs: cfg.Hardware.ThrottleForwardStartUs,
 			ReverseStartUs: cfg.Hardware.ThrottleReverseStartUs,
+			Inverted:       cfg.Hardware.ThrottleInverted(),
 		},
 		calibration.DeadzoneOptions{
 			OnProgress: func(phase string, pulse int) {

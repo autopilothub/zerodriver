@@ -40,6 +40,30 @@ func TestThrottleToPulseUs_BidirectionalReverseStart(t *testing.T) {
 	}
 }
 
+func TestThrottleToPulseUs_BidirectionalInverted(t *testing.T) {
+	cfg := ThrottlePulseConfig{
+		NeutralUs: 1560, MinUs: 1000, MaxUs: 2000,
+		ForwardUs: 1000, ReverseUs: 2000,
+		ForwardStartUs: 1450, ReverseStartUs: 1800,
+		Map: ThrottleMapBidirectionalInverted,
+	}
+	if got := ThrottleToPulseUs(0, cfg); got != 1560 {
+		t.Fatalf("neutral: %d", got)
+	}
+	if got := ThrottleToPulseUs(1, cfg); got != 1000 {
+		t.Fatalf("full forward: %d", got)
+	}
+	if got := ThrottleToPulseUs(-1, cfg); got != 2000 {
+		t.Fatalf("full reverse: %d", got)
+	}
+	if got := ThrottleToPulseUs(0.1, cfg); got != 1450 {
+		t.Fatalf("forward deadband: %d", got)
+	}
+	if got := ThrottleToPulseUs(-0.1, cfg); got != 1800 {
+		t.Fatalf("reverse deadband: %d", got)
+	}
+}
+
 func TestThrottleToPulseUs_ForwardStart(t *testing.T) {
 	cfg := ThrottlePulseConfig{
 		NeutralUs: 1500, MaxUs: 2000, Map: ThrottleMapNeutralForward, ForwardStartUs: 1600,

@@ -31,6 +31,21 @@ func NewPCA9685Motor(i2cBus string, hw config.HardwareConfig) (*PCA9685Motor, er
 		if hw.ThrottleMinUs > 0 {
 			throttleCfg.NeutralUs = hw.ThrottleMinUs
 		}
+	case ThrottleMapBidirectionalInverted:
+		throttleCfg.NeutralUs = hw.ThrottleNeutralUs
+		throttleCfg.ForwardUs = hw.ThrottleForwardUs
+		if throttleCfg.ForwardUs == 0 {
+			throttleCfg.ForwardUs = hw.ThrottleMinUs
+		}
+		if throttleCfg.ReverseUs == 0 {
+			throttleCfg.ReverseUs = hw.ThrottleMaxUs
+		}
+		if throttleCfg.MinUs == 0 {
+			throttleCfg.MinUs = throttleCfg.ForwardUs
+		}
+		if throttleCfg.MaxUs == 0 {
+			throttleCfg.MaxUs = throttleCfg.ReverseUs
+		}
 	default:
 		if throttleCfg.MinUs == 0 {
 			throttleCfg.MinUs = pca9685DefaultMinUs

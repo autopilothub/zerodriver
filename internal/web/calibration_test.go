@@ -49,7 +49,7 @@ func TestDeadzoneCalibrationStart(t *testing.T) {
 			return domain.Attitude{HasAccel: true, AccelX: 0.5}, nil
 		},
 		Stop:      func() error { return nil },
-		NeutralUs: 1500, MaxUs: 2000, ReverseUs: 1000,
+		NeutralUs: 1500, ForwardEndUs: 2000, ReverseEndUs: 1000,
 	})
 
 	if err := store.StartCalibration(CalibrationDeadzone); err != nil {

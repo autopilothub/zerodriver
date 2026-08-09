@@ -92,9 +92,10 @@ func main() {
 			ServoTrimUs:            cfg.Hardware.ServoTrimUs,
 			ThrottleForwardStartUs: cfg.Hardware.ThrottleForwardStartUs,
 			ThrottleReverseStartUs: cfg.Hardware.ThrottleReverseStartUs,
-			NeutralUs:              cfg.Hardware.ThrottleMinUs,
-			MaxUs:                  cfg.Hardware.ThrottleMaxUs,
-			ReverseUs:              cfg.Hardware.ThrottleReverseUs,
+			NeutralUs:              cfg.Hardware.ThrottleNeutral(),
+			ForwardEndUs:           cfg.Hardware.ThrottleForwardEnd(),
+			ReverseEndUs:           cfg.Hardware.ThrottleReverseEnd(),
+			Inverted:               cfg.Hardware.ThrottleInverted(),
 		})
 		webSrv := web.NewServer(&cfg.Web, statusStore)
 		go func() {

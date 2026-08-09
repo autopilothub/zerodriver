@@ -4,16 +4,18 @@ package hal
 type ThrottleMapMode string
 
 const (
-	ThrottleMapNeutralForward ThrottleMapMode = "neutral_forward" // 0=neutral, 1=max (1500–2000)
-	ThrottleMapLinear         ThrottleMapMode = "linear"          // 0=min, 1=max (1000–2000)
-	ThrottleMapBidirectional  ThrottleMapMode = "bidirectional"   // -1=reverse, 0=neutral, 1=forward
+	ThrottleMapNeutralForward         ThrottleMapMode = "neutral_forward"         // 0=neutral, 1=max (1500–2000)
+	ThrottleMapLinear                 ThrottleMapMode = "linear"                  // 0=min, 1=max (1000–2000)
+	ThrottleMapBidirectional          ThrottleMapMode = "bidirectional"           // -1=reverse(low), 0=neutral, 1=forward(high)
+	ThrottleMapBidirectionalInverted  ThrottleMapMode = "bidirectional_inverted"  // -1=reverse(high), 0=neutral, 1=forward(low)
 )
 
 type ThrottlePulseConfig struct {
 	MinUs          int
 	NeutralUs      int
 	MaxUs          int
-	ReverseUs      int
+	ForwardUs      int // full-forward pulse (inverted ESC: low µs)
+	ReverseUs      int // full-reverse pulse (inverted ESC: high µs)
 	TrimUs         int
 	ForwardStartUs int
 	ReverseStartUs int
@@ -57,6 +59,20 @@ func ThrottleToPulseUs(throttle float64, cfg ThrottlePulseConfig) int {
 			throttle = 0
 		}
 		pulse = cfg.MinUs + int(float64(cfg.MaxUs-cfg.MinUs)*throttle)
+	case ThrottleMapBidirectionalInverted:
+		forwardUs := cfg.forwardEndpoint()
+		reverseUs := cfg.reverseEndpoint()
+		if throttle >= 0 {
+			pulse = cfg.NeutralUs + int(float64(forwardUs-cfg.NeutralUs)*throttle)
+		} else {
+			pulse = cfg.NeutralUs + int(float64(cfg.NeutralUs-reverseUs)*throttle)
+		}
+		if throttle > 0 && cfg.ForwardStartUs > 0 && pulse > cfg.ForwardStartUs {
+			pulse = cfg.ForwardStartUs
+		}
+		if throttle < 0 && cfg.ReverseStartUs > 0 && pulse < cfg.ReverseStartUs {
+			pulse = cfg.ReverseStartUs
+		}
 	case ThrottleMapBidirectional:
 		if throttle >= 0 {
 			pulse = cfg.NeutralUs + int(float64(cfg.MaxUs-cfg.NeutralUs)*throttle)
@@ -73,8 +89,10 @@ func ThrottleToPulseUs(throttle float64, cfg ThrottlePulseConfig) int {
 		pulse = cfg.NeutralUs + int(float64(cfg.MaxUs-cfg.NeutralUs)*throttle)
 	}
 
-	if throttle > 0 && cfg.ForwardStartUs > 0 && pulse < cfg.ForwardStartUs {
-		pulse = cfg.ForwardStartUs
+	if cfg.Map != ThrottleMapBidirectionalInverted {
+		if throttle > 0 && cfg.ForwardStartUs > 0 && pulse < cfg.ForwardStartUs {
+			pulse = cfg.ForwardStartUs
+		}
 	}
 
 	pulse += cfg.TrimUs
@@ -85,4 +103,24 @@ func ThrottleToPulseUs(throttle float64, cfg ThrottlePulseConfig) int {
 		return cfg.MaxUs
 	}
 	return pulse
+}
+
+func (c ThrottlePulseConfig) forwardEndpoint() int {
+	if c.ForwardUs > 0 {
+		return c.ForwardUs
+	}
+	if c.Map == ThrottleMapBidirectionalInverted {
+		return c.MinUs
+	}
+	return c.MaxUs
+}
+
+func (c ThrottlePulseConfig) reverseEndpoint() int {
+	if c.Map == ThrottleMapBidirectionalInverted && c.MaxUs > c.NeutralUs {
+		if c.ReverseUs > c.NeutralUs {
+			return c.ReverseUs
+		}
+		return c.MaxUs
+	}
+	return c.ReverseUs
 }
