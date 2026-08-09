@@ -35,12 +35,23 @@ func TestFrontMinDistance(t *testing.T) {
 		{AngleDeg: 90, DistCM: 10},
 		{AngleDeg: -5, DistCM: 40},
 	}
-	min, front := FrontMinDistance(nodes, 30)
+	min, front := FrontMinDistance(nodes, 30, 0)
 	if min != 30 {
 		t.Fatalf("expected 30cm, got %f", min)
 	}
 	if len(front) != 3 {
 		t.Fatalf("expected 3 front nodes, got %d", len(front))
+	}
+}
+
+func TestFrontMinDistance_IgnoreCloseHits(t *testing.T) {
+	nodes := []ScanNode{
+		{AngleDeg: 0, DistCM: 5},
+		{AngleDeg: 0, DistCM: 80},
+	}
+	min, _ := FrontMinDistance(nodes, 30, 12)
+	if min != 80 {
+		t.Fatalf("expected 80cm ignoring 5cm hit, got %f", min)
 	}
 }
 

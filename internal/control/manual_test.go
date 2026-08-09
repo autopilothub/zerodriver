@@ -9,10 +9,10 @@ import (
 
 func TestController_DriveManual(t *testing.T) {
 	motor := &mockMotor{}
-	cfg := &config.Config{}
+	cfg := &config.Config{Control: config.ControlConfig{MaxThrottleSlew: 100}}
 	ctrl := NewController(cfg, motor)
 
-	cmd := ctrl.DriveManual(domain.ControlCommand{Steering: 0.5, Throttle: 0.3})
+	cmd := ctrl.DriveManual(domain.ControlCommand{Steering: 0.5, Throttle: 0.3}, 0.02)
 	if cmd.Steering != 0.5 || cmd.Throttle != 0.3 {
 		t.Fatalf("cmd: %+v", cmd)
 	}

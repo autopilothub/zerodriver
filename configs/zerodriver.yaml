@@ -2,10 +2,11 @@ mode: mock
 
 control:
   loop_hz: 50
-  base_speed: 0.6
-  corner_speed: 0.3
+  base_speed: 0.35
+  corner_speed: 0.2
   corner_threshold: 0.5
-  line_lost_speed: 0.2
+  line_lost_speed: 0.15
+  max_throttle_slew: 0.2
   esc_arm_delay_sec: 2
   pure_pursuit:
     lookahead: 0.35
@@ -24,7 +25,9 @@ pid:
 
 obstacle:
   stop_distance_cm: 20
-  scan_front_angle: 60
+  clear_distance_cm: 40
+  min_distance_cm: 12
+  scan_front_angle: 40
 
 camera:
   width: 320

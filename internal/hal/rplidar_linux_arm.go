@@ -14,17 +14,18 @@ import (
 
 // RPLidar reads scan data from an RPLidar A1 over USB serial (/dev/ttyUSB0).
 type RPLidar struct {
-	mu         sync.Mutex
-	port       serial.Port
-	frontAngle float64
-	nodes      []ScanNode
-	parser     *streamParser
-	scanning   bool
-	done       chan struct{}
+	mu            sync.Mutex
+	port          serial.Port
+	frontAngle    float64
+	ignoreBelowCM float64
+	nodes         []ScanNode
+	parser        *streamParser
+	scanning      bool
+	done          chan struct{}
 }
 
 // NewRPLidar opens the serial port and starts SCAN mode.
-func NewRPLidar(portName string, baud int, frontAngleDeg float64) (*RPLidar, error) {
+func NewRPLidar(portName string, baud int, frontAngleDeg, ignoreBelowCM float64) (*RPLidar, error) {
 	if baud == 0 {
 		baud = rplidarBaudA1
 	}
@@ -45,11 +46,12 @@ func NewRPLidar(portName string, baud int, frontAngleDeg float64) (*RPLidar, err
 	_ = port.ResetInputBuffer()
 
 	r := &RPLidar{
-		port:       port,
-		frontAngle: frontAngleDeg,
-		nodes:      make([]ScanNode, 0, 360),
-		parser:     newStreamParser(),
-		done:       make(chan struct{}),
+		port:          port,
+		frontAngle:    frontAngleDeg,
+		ignoreBelowCM: ignoreBelowCM,
+		nodes:         make([]ScanNode, 0, 360),
+		parser:        newStreamParser(),
+		done:          make(chan struct{}),
 	}
 
 	if err := r.startScan(); err != nil {
@@ -138,7 +140,7 @@ func (r *RPLidar) Scan() (domain.ObstacleScan, error) {
 	}
 
 	halfAngle := r.frontAngle / 2
-	frontMin, frontNodes := FrontMinDistance(r.nodes, halfAngle)
+	frontMin, frontNodes := FrontMinDistance(r.nodes, halfAngle, r.ignoreBelowCM)
 
 	distances := make([]float64, len(frontNodes))
 	angles := make([]float64, len(frontNodes))

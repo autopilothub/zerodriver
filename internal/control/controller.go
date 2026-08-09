@@ -15,11 +15,13 @@ type Controller struct {
 	headingPID   *PIDController
 	lineLostPID  *PIDController
 	stateMachine *StateMachine
+	throttleSlew *ThrottleSlew
 	motor        hal.Motor
 	cfg          *config.Config
 }
 
 func NewController(cfg *config.Config, motor hal.Motor) *Controller {
+	clearCM := cfg.Obstacle.ClearDistanceCM
 	return &Controller{
 		purePursuit:  NewPurePursuit(cfg.Control.PurePursuit.Lookahead, cfg.Control.PurePursuit.Gain),
 		headingPID:   NewPID(cfg.PID.Steering),
@@ -28,7 +30,8 @@ func NewController(cfg *config.Config, motor hal.Motor) *Controller {
 			Ki: cfg.PID.Steering.Ki,
 			Kd: cfg.PID.Steering.Kd,
 		}),
-		stateMachine: NewStateMachine(cfg.Obstacle.StopDistanceCM),
+		stateMachine: NewStateMachine(cfg.Obstacle.StopDistanceCM, clearCM),
+		throttleSlew: NewThrottleSlew(cfg.Control.MaxThrottleSlew),
 		motor:        motor,
 		cfg:          cfg,
 	}
@@ -55,12 +58,13 @@ func (c *Controller) Start() {
 
 func (c *Controller) Stop() {
 	c.stateMachine.Stop()
+	c.throttleSlew.Reset()
 	c.motor.Stop()
 }
 
-func (c *Controller) DriveManual(cmd domain.ControlCommand) domain.ControlCommand {
+func (c *Controller) DriveManual(cmd domain.ControlCommand, dt float64) domain.ControlCommand {
 	cmd.Steering = clamp(cmd.Steering, -1, 1)
-	cmd.Throttle = clamp(cmd.Throttle, 0, 1)
+	cmd.Throttle = c.throttleSlew.Step(clamp(cmd.Throttle, 0, 1), dt)
 	c.applyMotor(cmd)
 	return cmd
 }
@@ -73,29 +77,34 @@ func (c *Controller) Tick(input domain.FusedInput, dt float64) domain.ControlCom
 
 	switch state {
 	case domain.StateAvoiding, domain.StateStopped:
-		cmd = domain.ControlCommand{Steering: 0, Throttle: 0}
+		cmd = domain.ControlCommand{Steering: 0, Throttle: c.throttleSlew.Step(0, dt)}
 		c.headingPID.Reset()
 		c.lineLostPID.Reset()
 
 	case domain.StateTracing:
 		steering := c.computeSteering(input, dt)
-		throttle := c.cfg.Control.BaseSpeed
-		if !input.LineDetected {
-			throttle = c.cfg.Control.LineLostSpeed
-		}
-		if c.cfg.Control.CornerThreshold > 0 && abs(steering) > c.cfg.Control.CornerThreshold {
-			if throttle > c.cfg.Control.CornerSpeed {
-				throttle = c.cfg.Control.CornerSpeed
-			}
-		}
-		cmd = domain.ControlCommand{Steering: steering, Throttle: throttle}
+		throttle := c.targetThrottle(input, steering)
+		cmd = domain.ControlCommand{Steering: steering, Throttle: c.throttleSlew.Step(throttle, dt)}
 
 	default:
-		cmd = domain.ControlCommand{Steering: 0, Throttle: 0}
+		cmd = domain.ControlCommand{Steering: 0, Throttle: c.throttleSlew.Step(0, dt)}
 	}
 
 	c.applyMotor(cmd)
 	return cmd
+}
+
+func (c *Controller) targetThrottle(input domain.FusedInput, steering float64) float64 {
+	throttle := c.cfg.Control.BaseSpeed
+	if !input.LineDetected {
+		throttle = c.cfg.Control.LineLostSpeed
+	}
+	if c.cfg.Control.CornerThreshold > 0 && abs(steering) > c.cfg.Control.CornerThreshold {
+		if throttle > c.cfg.Control.CornerSpeed {
+			throttle = c.cfg.Control.CornerSpeed
+		}
+	}
+	return throttle
 }
 
 func (c *Controller) computeSteering(input domain.FusedInput, dt float64) float64 {

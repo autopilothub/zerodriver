@@ -50,16 +50,25 @@ func ParseScanNode(data [5]byte) (node ScanNode, ok bool) {
 }
 
 // FrontMinDistance returns the nearest obstacle within ±halfAngleDeg of 0°.
-func FrontMinDistance(nodes []ScanNode, halfAngleDeg float64) (minCM float64, front []ScanNode) {
+// Readings closer than ignoreBelowCM are skipped (chassis/noise).
+func FrontMinDistance(nodes []ScanNode, halfAngleDeg, ignoreBelowCM float64) (minCM float64, front []ScanNode) {
 	minCM = 999
+	found := false
 	for _, n := range nodes {
-		diff := math.Abs(normalizeAngle(n.AngleDeg))
-		if diff <= halfAngleDeg && n.DistCM < minCM {
-			minCM = n.DistCM
+		if ignoreBelowCM > 0 && n.DistCM < ignoreBelowCM {
+			continue
 		}
+		diff := math.Abs(normalizeAngle(n.AngleDeg))
 		if diff <= halfAngleDeg {
 			front = append(front, n)
+			if n.DistCM < minCM {
+				minCM = n.DistCM
+				found = true
+			}
 		}
+	}
+	if !found {
+		minCM = 999
 	}
 	return minCM, front
 }

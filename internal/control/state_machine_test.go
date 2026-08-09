@@ -7,7 +7,7 @@ import (
 )
 
 func TestStateMachine_StartStop(t *testing.T) {
-	sm := NewStateMachine(20)
+	sm := NewStateMachine(20, 40)
 	if sm.State() != domain.StateIdle {
 		t.Fatal("initial state should be IDLE")
 	}
@@ -22,7 +22,7 @@ func TestStateMachine_StartStop(t *testing.T) {
 }
 
 func TestStateMachine_ObstacleAvoidance(t *testing.T) {
-	sm := NewStateMachine(20)
+	sm := NewStateMachine(20, 40)
 	sm.Start()
 
 	sm.Update(999)

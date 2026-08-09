@@ -2,10 +2,11 @@ mode: hardware
 
 control:
   loop_hz: 50
-  base_speed: 0.6
-  corner_speed: 0.3
+  base_speed: 0.35
+  corner_speed: 0.2
   corner_threshold: 0.5
-  line_lost_speed: 0.2
+  line_lost_speed: 0.15
+  max_throttle_slew: 0.2
   esc_arm_delay_sec: 2
   pure_pursuit:
     lookahead: 0.35
@@ -23,8 +24,10 @@ pid:
     kd: 0.05
 
 obstacle:
-  stop_distance_cm: 20
-  scan_front_angle: 60
+  stop_distance_cm: 25
+  clear_distance_cm: 50
+  min_distance_cm: 12
+  scan_front_angle: 40
 
 camera:
   width: 320
@@ -37,7 +40,7 @@ hardware:
   i2c_bus: "/dev/i2c-1"
   i2c_addr: 0x4b
   imu_model: bno085
-  lidar_enabled: false
+  lidar_enabled: true
   lidar_model: rplidar_a1
   lidar_port: "/dev/ttyUSB0"
   lidar_baud: 115200
@@ -50,10 +53,10 @@ hardware:
   servo_min_us: 1000
   servo_center_us: 1500
   servo_max_us: 2000
-  servo_trim_us: 0        # 바퀴가 왼쪽 → 50~100씩 올려서 직진 맞춤
-  steering_invert: false  # 자동주행 시 반대로 꺾이면 true
-  throttle_min_us: 1500   # ESC 정지(중립). 1000~2000 타입이면 1000
-  throttle_max_us: 2000   # 최대 전진
+  servo_trim_us: 0
+  steering_invert: false
+  throttle_min_us: 1500
+  throttle_max_us: 2000
 
 telemetry:
   enabled: false

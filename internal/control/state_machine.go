@@ -4,14 +4,19 @@ import "github.com/autopilothub/zerodriver/internal/domain"
 
 // StateMachine manages RaceState transitions.
 type StateMachine struct {
-	state            domain.RaceState
-	stopDistanceCM   float64
+	state           domain.RaceState
+	stopDistanceCM  float64
+	clearDistanceCM float64
 }
 
-func NewStateMachine(stopDistanceCM float64) *StateMachine {
+func NewStateMachine(stopDistanceCM, clearDistanceCM float64) *StateMachine {
+	if clearDistanceCM <= stopDistanceCM {
+		clearDistanceCM = stopDistanceCM * 2
+	}
 	return &StateMachine{
-		state:          domain.StateIdle,
-		stopDistanceCM: stopDistanceCM,
+		state:           domain.StateIdle,
+		stopDistanceCM:  stopDistanceCM,
+		clearDistanceCM: clearDistanceCM,
 	}
 }
 
@@ -39,7 +44,7 @@ func (sm *StateMachine) Update(frontDistance float64) domain.RaceState {
 			sm.state = domain.StateAvoiding
 		}
 	case domain.StateAvoiding:
-		if frontDistance >= sm.stopDistanceCM*2 {
+		if frontDistance >= sm.clearDistanceCM {
 			sm.state = domain.StateTracing
 		}
 	}

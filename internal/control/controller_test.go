@@ -31,6 +31,7 @@ func TestController_TracingDrivesMotor(t *testing.T) {
 			CornerSpeed:     0.3,
 			CornerThreshold: 1.0,
 			LineLostSpeed:   0.2,
+			MaxThrottleSlew: 100,
 			PurePursuit:     config.PurePursuitConfig{Lookahead: 0.35, Gain: 1.0},
 		},
 		PID: config.PIDConfig{Steering: config.PIDGains{Kp: 0.8}},
@@ -66,6 +67,7 @@ func TestController_LineLostReducesThrottle(t *testing.T) {
 			BaseSpeed:       0.6,
 			LineLostSpeed:   0.2,
 			CornerThreshold: 0.5,
+			MaxThrottleSlew: 100,
 		},
 		PID:      config.PIDConfig{Steering: config.PIDGains{Kp: 0.8}},
 		Obstacle: config.ObstacleConfig{StopDistanceCM: 20},
@@ -89,7 +91,7 @@ func TestController_LineLostReducesThrottle(t *testing.T) {
 func TestController_ObstacleStops(t *testing.T) {
 	motor := &mockMotor{}
 	cfg := &config.Config{
-		Control:  config.ControlConfig{BaseSpeed: 0.6, LineLostSpeed: 0.2},
+		Control:  config.ControlConfig{BaseSpeed: 0.6, LineLostSpeed: 0.2, MaxThrottleSlew: 100},
 		PID:      config.PIDConfig{Steering: config.PIDGains{Kp: 0.8}},
 		Obstacle: config.ObstacleConfig{StopDistanceCM: 20},
 	}

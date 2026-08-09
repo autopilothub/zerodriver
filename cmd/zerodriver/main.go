@@ -189,7 +189,7 @@ func main() {
 			manualTimeout := time.Duration(cfg.Web.ManualTimeoutMS) * time.Millisecond
 			if statusStore != nil {
 				if active, mcmd := statusStore.ManualCommand(manualTimeout); active {
-					lastCmd = ctrl.DriveManual(mcmd)
+					lastCmd = ctrl.DriveManual(mcmd, interval.Seconds())
 				} else {
 					lastCmd = ctrl.Tick(fused, interval.Seconds())
 				}
@@ -214,6 +214,10 @@ func main() {
 			if *verbose {
 				log.Printf("state=%s line=%.2f steering=%.2f throttle=%.2f obstacle=%.0fcm",
 					ctrl.State(), fused.LineOffset, lastCmd.Steering, lastCmd.Throttle, fused.FrontDistance)
+				if ctrl.State() == domain.StateAvoiding {
+					log.Printf("obstacle stop: front=%.0fcm (stop<%d clear>=%d)",
+						fused.FrontDistance, int(cfg.Obstacle.StopDistanceCM), int(cfg.Obstacle.ClearDistanceCM))
+				}
 			}
 
 		case <-telemetryTicker.C:

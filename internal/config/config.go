@@ -19,14 +19,15 @@ type Config struct {
 }
 
 type ControlConfig struct {
-	LoopHz          int              `yaml:"loop_hz"`
-	BaseSpeed       float64          `yaml:"base_speed"`
-	CornerSpeed     float64          `yaml:"corner_speed"`
-	CornerThreshold float64          `yaml:"corner_threshold"`
-	LineLostSpeed   float64          `yaml:"line_lost_speed"`
-	ESCArmDelaySec  int              `yaml:"esc_arm_delay_sec"`
-	PurePursuit     PurePursuitConfig `yaml:"pure_pursuit"`
-	IMUFusion       IMUFusionConfig   `yaml:"imu_fusion"`
+	LoopHz           int              `yaml:"loop_hz"`
+	BaseSpeed        float64          `yaml:"base_speed"`
+	CornerSpeed      float64          `yaml:"corner_speed"`
+	CornerThreshold  float64          `yaml:"corner_threshold"`
+	LineLostSpeed    float64          `yaml:"line_lost_speed"`
+	MaxThrottleSlew  float64          `yaml:"max_throttle_slew"` // max throttle change per second
+	ESCArmDelaySec   int              `yaml:"esc_arm_delay_sec"`
+	PurePursuit      PurePursuitConfig `yaml:"pure_pursuit"`
+	IMUFusion        IMUFusionConfig   `yaml:"imu_fusion"`
 }
 
 type PurePursuitConfig struct {
@@ -53,6 +54,8 @@ type PIDGains struct {
 
 type ObstacleConfig struct {
 	StopDistanceCM  float64 `yaml:"stop_distance_cm"`
+	ClearDistanceCM float64 `yaml:"clear_distance_cm"` // resume tracing above this (default: 2× stop)
+	MinDistanceCM   float64 `yaml:"min_distance_cm"`   // ignore closer hits (chassis/noise)
 	ScanFrontAngle  float64 `yaml:"scan_front_angle"`
 }
 
@@ -141,16 +144,19 @@ func (c *Config) applyDefaults() {
 		c.Control.LoopHz = 50
 	}
 	if c.Control.BaseSpeed == 0 {
-		c.Control.BaseSpeed = 0.6
+		c.Control.BaseSpeed = 0.35
 	}
 	if c.Control.CornerSpeed == 0 {
-		c.Control.CornerSpeed = 0.3
+		c.Control.CornerSpeed = 0.2
 	}
 	if c.Control.CornerThreshold == 0 {
 		c.Control.CornerThreshold = 0.5
 	}
 	if c.Control.LineLostSpeed == 0 {
-		c.Control.LineLostSpeed = 0.2
+		c.Control.LineLostSpeed = 0.15
+	}
+	if c.Control.MaxThrottleSlew == 0 {
+		c.Control.MaxThrottleSlew = 0.25
 	}
 	if c.Control.ESCArmDelaySec == 0 {
 		c.Control.ESCArmDelaySec = 2
@@ -180,7 +186,10 @@ func (c *Config) applyDefaults() {
 		c.Obstacle.StopDistanceCM = 20
 	}
 	if c.Obstacle.ScanFrontAngle == 0 {
-		c.Obstacle.ScanFrontAngle = 60
+		c.Obstacle.ScanFrontAngle = 40
+	}
+	if c.Obstacle.MinDistanceCM == 0 {
+		c.Obstacle.MinDistanceCM = 12
 	}
 	if c.Camera.Width == 0 {
 		c.Camera.Width = 320

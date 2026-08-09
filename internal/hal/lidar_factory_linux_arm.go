@@ -15,6 +15,7 @@ func newHardwareLidar(cfg *config.Config) (Lidar, error) {
 			cfg.Hardware.LidarPort,
 			cfg.Hardware.LidarBaud,
 			cfg.Obstacle.ScanFrontAngle,
+			cfg.Obstacle.MinDistanceCM,
 		)
 	default:
 		return nil, fmt.Errorf("unsupported lidar model: %q", cfg.Hardware.LidarModel)
