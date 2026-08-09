@@ -282,6 +282,9 @@ func (c *Config) applyDefaults() {
 	if c.Hardware.ThrottleMaxUs == 0 {
 		c.Hardware.ThrottleMaxUs = 2000
 	}
+	if c.Hardware.ThrottleInverted() && c.Hardware.ThrottleReverseStartUs == 0 {
+		c.Hardware.ThrottleReverseStartUs = 1800
+	}
 	if c.Telemetry.IntervalSec == 0 {
 		c.Telemetry.IntervalSec = 1
 	}

@@ -68,7 +68,7 @@ func TestRunDeadzone_Inverted(t *testing.T) {
 	if res.ThrottleForwardStartUs != 1445 {
 		t.Fatalf("forward start: %d", res.ThrottleForwardStartUs)
 	}
-	if res.ThrottleReverseStartUs != 1805 {
+	if res.ThrottleReverseStartUs != 1810 {
 		t.Fatalf("reverse start: %d", res.ThrottleReverseStartUs)
 	}
 }

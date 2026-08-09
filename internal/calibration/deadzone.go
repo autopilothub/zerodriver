@@ -129,7 +129,11 @@ func RunDeadzone(setUS SetThrottleUS, read ReadIMU, cfg DeadzoneConfig, opts Dea
 
 	if revOK {
 		if cfg.Inverted {
-			res.ThrottleReverseStartUs = revPulse + opts.MarginUs
+			margin := opts.MarginUs
+			if margin < 10 {
+				margin = 10
+			}
+			res.ThrottleReverseStartUs = revPulse + margin
 			if res.ThrottleReverseStartUs > cfg.ReverseEndUs {
 				res.ThrottleReverseStartUs = cfg.ReverseEndUs
 			}
