@@ -25,6 +25,8 @@ func NewPCA9685Motor(i2cBus string, hw config.HardwareConfig) (*PCA9685Motor, er
 		ServoMinUs:      hw.ServoMinUs,
 		ServoCenterUs:   hw.ServoCenterUs,
 		ServoMaxUs:      hw.ServoMaxUs,
+		ServoTrimUs:     hw.ServoTrimUs,
+		SteeringInvert:  hw.SteeringInvert,
 		ThrottleMinUs:   hw.ThrottleMinUs,
 		ThrottleMaxUs:   hw.ThrottleMaxUs,
 	}.withDefaults()
@@ -43,7 +45,7 @@ func (m *PCA9685Motor) Drive(steering, throttle float64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	steerPulse := SteeringToPulseUs(steering, m.cfg.ServoMinUs, m.cfg.ServoCenterUs, m.cfg.ServoMaxUs)
+	steerPulse := ApplySteering(steering, m.cfg.ServoMinUs, m.cfg.ServoCenterUs, m.cfg.ServoMaxUs, m.cfg.ServoTrimUs, m.cfg.SteeringInvert)
 	if err := m.pwm.SetPulseUs(m.cfg.SteeringChannel, steerPulse); err != nil {
 		return err
 	}

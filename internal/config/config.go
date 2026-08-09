@@ -76,13 +76,15 @@ type HardwareConfig struct {
 	CameraBackend     string `yaml:"camera_backend"` // rpicam (default), v4l2, auto
 	PCA9685Addr       int `yaml:"pca9685_addr"`
 	PCA9685FreqHz     int `yaml:"pca9685_freq_hz"`
-	SteeringChannel   int `yaml:"steering_channel"`
-	ThrottleChannel   int `yaml:"throttle_channel"`
-	ServoMinUs        int `yaml:"servo_min_us"`
-	ServoCenterUs     int `yaml:"servo_center_us"`
-	ServoMaxUs        int `yaml:"servo_max_us"`
-	ThrottleMinUs     int `yaml:"throttle_min_us"`
-	ThrottleMaxUs     int `yaml:"throttle_max_us"`
+	SteeringChannel   int  `yaml:"steering_channel"`
+	ThrottleChannel   int  `yaml:"throttle_channel"`
+	ServoMinUs        int  `yaml:"servo_min_us"`
+	ServoCenterUs     int  `yaml:"servo_center_us"`
+	ServoMaxUs        int  `yaml:"servo_max_us"`
+	ServoTrimUs       int  `yaml:"servo_trim_us"`       // µs offset at center (wheels left → increase)
+	SteeringInvert    bool `yaml:"steering_invert"`     // flip left/right if servo wired backwards
+	ThrottleMinUs     int  `yaml:"throttle_min_us"`
+	ThrottleMaxUs     int  `yaml:"throttle_max_us"`
 }
 
 type TelemetryConfig struct {

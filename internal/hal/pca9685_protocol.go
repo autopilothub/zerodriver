@@ -21,6 +21,8 @@ type PCA9685Config struct {
 	ServoMinUs       int
 	ServoCenterUs    int
 	ServoMaxUs       int
+	ServoTrimUs      int
+	SteeringInvert   bool
 	ThrottleMinUs    int
 	ThrottleMaxUs    int
 }
@@ -94,6 +96,21 @@ func SteeringToPulseUs(steering float64, minUs, centerUs, maxUs int) int {
 		return centerUs + int(float64(centerUs-minUs)*steering)
 	}
 	return centerUs + int(float64(maxUs-centerUs)*steering)
+}
+
+// ApplySteering maps steering to pulse width with optional invert and trim.
+func ApplySteering(steering float64, minUs, centerUs, maxUs, trimUs int, invert bool) int {
+	if invert {
+		steering = -steering
+	}
+	pulse := SteeringToPulseUs(steering, minUs, centerUs, maxUs) + trimUs
+	if pulse < minUs {
+		return minUs
+	}
+	if pulse > maxUs {
+		return maxUs
+	}
+	return pulse
 }
 
 // ThrottleToPulseUs maps throttle 0..1 to ESC pulse width.

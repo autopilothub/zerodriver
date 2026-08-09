@@ -50,6 +50,8 @@ hardware:
   servo_min_us: 1000
   servo_center_us: 1500
   servo_max_us: 2000
+  servo_trim_us: 0        # 바퀴가 왼쪽 → 50~100씩 올려서 직진 맞춤
+  steering_invert: false  # 자동주행 시 반대로 꺾이면 true
   throttle_min_us: 1000
   throttle_max_us: 2000
 

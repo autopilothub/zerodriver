@@ -28,6 +28,15 @@ func TestSteeringToPulseUs(t *testing.T) {
 	}
 }
 
+func TestApplySteeringTrimInvert(t *testing.T) {
+	if got := ApplySteering(0, 1000, 1500, 2000, 80, false); got != 1580 {
+		t.Fatalf("trim: got %d", got)
+	}
+	if got := ApplySteering(-1, 1000, 1500, 2000, 0, true); got != 2000 {
+		t.Fatalf("invert: got %d", got)
+	}
+}
+
 func TestThrottleToPulseUs(t *testing.T) {
 	if ThrottleToPulseUs(0, 1000, 2000) != 1000 {
 		t.Fatal("throttle 0 should be min")
