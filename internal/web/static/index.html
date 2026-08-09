@@ -333,9 +333,10 @@
       </div>
       <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border)">
         <h2 style="margin-bottom:0.5rem">캘리브레이션</h2>
-        <p class="hint" style="margin-bottom:0.5rem">넓은 바닥에서 실행 · 약 10초간 조향·전진·후진</p>
+        <p class="hint" style="margin-bottom:0.5rem">조향·직진 보정 (IMU) · ESC 데드존 스윕 (전/후진)</p>
         <div id="calStatus" class="cal-status">대기 중</div>
-        <button type="button" id="btnCalibrate" class="cal-btn">캘리브레이션 시작</button>
+        <button type="button" id="btnCalibrate" class="cal-btn">조향 캘리브레이션</button>
+        <button type="button" id="btnDeadzone" class="cal-btn">데드존 캘리브레이션</button>
         <button type="button" id="btnCalReset" class="cal-btn" style="display:none">결과 지우기</button>
         <ul id="calNotes" class="cal-notes"></ul>
         <pre id="calResult" class="cal-result"></pre>
@@ -382,27 +383,50 @@
       steer_left: '좌회전 테스트',
       steer_right: '우회전 테스트',
       straight: '직진 테스트',
-      forward: '전진 테스트',
-      reverse: '후진 테스트',
+      forward: '전진 펄스 스윕',
+      forward_found: '전진 데드존 발견',
+      reverse: '후진 펄스 스윕',
+      reverse_found: '후진 데드존 발견',
       done: '완료',
     };
+
+    function formatCalibrationResult(res) {
+      if (!res) return '';
+      if (res.type === 'deadzone') {
+        return 'throttle_forward_start_us: ' + res.throttle_forward_start_us + '\n' +
+          'throttle_reverse_start_us: ' + res.throttle_reverse_start_us;
+      }
+      let out = '';
+      if (res.servo_trim_us != null) out += 'servo_trim_us: ' + res.servo_trim_us + '\n';
+      if (res.steering_invert != null) out += 'steering_invert: ' + res.steering_invert + '\n';
+      if (res.throttle_forward_start_us) out += 'throttle_forward_start_us: ' + res.throttle_forward_start_us;
+      return out.trim();
+    }
 
     function applyCalibration(s) {
       const state = s.calibration_state || 'idle';
       const phase = s.calibration_phase || '';
-      const btn = $('btnCalibrate');
+      const calType = s.calibration_type || '';
+      const pulse = s.calibration_pulse_us || 0;
+      const btnImu = $('btnCalibrate');
+      const btnDz = $('btnDeadzone');
       const resetBtn = $('btnCalReset');
       const statusEl = $('calStatus');
       const resultEl = $('calResult');
       const notesEl = $('calNotes');
 
       const running = state === 'running';
-      btn.disabled = running;
-      btn.classList.toggle('running', running);
-      btn.textContent = running ? '캘리브레이션 진행 중…' : '캘리브레이션 시작';
+      btnImu.disabled = running;
+      btnDz.disabled = running;
+      btnImu.classList.toggle('running', running && calType === 'imu');
+      btnDz.classList.toggle('running', running && calType === 'deadzone');
 
       if (running) {
-        statusEl.textContent = phaseLabels[phase] || phase || '진행 중…';
+        let label = phaseLabels[phase] || phase || '진행 중…';
+        if (pulse > 0 && (phase === 'forward' || phase === 'reverse' || phase === 'prepare')) {
+          label += ' (' + pulse + 'µs)';
+        }
+        statusEl.textContent = label;
       } else if (state === 'done') {
         statusEl.textContent = '완료 — 아래 값을 yaml에 복사하세요';
       } else if (state === 'error') {
@@ -415,10 +439,7 @@
 
       const res = s.calibration_result;
       if (res && (state === 'done' || state === 'error')) {
-        resultEl.textContent =
-          'servo_trim_us: ' + res.servo_trim_us + '\n' +
-          'steering_invert: ' + res.steering_invert + '\n' +
-          'throttle_forward_start_us: ' + res.throttle_forward_start_us;
+        resultEl.textContent = formatCalibrationResult(res);
         resultEl.classList.add('show');
         notesEl.innerHTML = (res.notes || []).map(n => '<li>' + n + '</li>').join('');
       } else if (!running) {
@@ -556,11 +577,20 @@
     };
 
     $('btnCalibrate').onclick = async () => {
-      if (!confirm('차량이 잠시 움직입니다. 넓은 바닥에서 실행하세요. 계속할까요?')) return;
+      if (!confirm('조향·직진 보정을 시작합니다. 차량이 잠시 움직입니다. 계속할까요?')) return;
       try {
-        await postJSON('/api/calibrate', { confirm: true });
+        await postJSON('/api/calibrate', { confirm: true, type: 'imu' });
       } catch (e) {
         alert('캘리브레이션 시작 실패: ' + e.message);
+      }
+    };
+
+    $('btnDeadzone').onclick = async () => {
+      if (!confirm('ESC 데드존을 찾기 위해 전진·후진 펄스를 스윕합니다. 바닥에 바퀴가 닿아 있어야 합니다. 계속할까요?')) return;
+      try {
+        await postJSON('/api/calibrate', { confirm: true, type: 'deadzone' });
+      } catch (e) {
+        alert('데드존 캘리브레이션 실패: ' + e.message);
       }
     };
 

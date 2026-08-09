@@ -16,6 +16,7 @@ type ThrottlePulseConfig struct {
 	ReverseUs      int
 	TrimUs         int
 	ForwardStartUs int
+	ReverseStartUs int
 	Map            ThrottleMapMode
 }
 
@@ -61,6 +62,9 @@ func ThrottleToPulseUs(throttle float64, cfg ThrottlePulseConfig) int {
 			pulse = cfg.NeutralUs + int(float64(cfg.MaxUs-cfg.NeutralUs)*throttle)
 		} else {
 			pulse = cfg.NeutralUs + int(float64(cfg.NeutralUs-cfg.ReverseUs)*throttle)
+		}
+		if throttle < 0 && cfg.ReverseStartUs > 0 && pulse > cfg.ReverseStartUs {
+			pulse = cfg.ReverseStartUs
 		}
 	default: // neutral_forward
 		if throttle < 0 {

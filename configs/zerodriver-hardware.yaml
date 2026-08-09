@@ -60,6 +60,7 @@ hardware:
   throttle_reverse_us: 1000
   throttle_max_us: 2000
   throttle_forward_start_us: 1580  # ESC 데드존 보정 (안 움직이면 1600~1650)
+  throttle_reverse_start_us: 1420  # 후진 데드존 (bidirectional)
   throttle_trim_us: 0
 
 telemetry:

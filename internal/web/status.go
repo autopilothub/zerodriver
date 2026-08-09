@@ -31,7 +31,9 @@ type Status struct {
 	UptimeSec       float64   `json:"uptime_sec"`
 	Timestamp       time.Time `json:"timestamp"`
 	CalibrationState string   `json:"calibration_state"`
+	CalibrationType  string   `json:"calibration_type,omitempty"`
 	CalibrationPhase string   `json:"calibration_phase,omitempty"`
+	CalibrationPulse int      `json:"calibration_pulse_us,omitempty"`
 	CalibrationError string   `json:"calibration_error,omitempty"`
 	CalibrationResult *CalibrationResultJSON `json:"calibration_result,omitempty"`
 }
@@ -62,8 +64,10 @@ type Store struct {
 	manualLastCmd  time.Time
 	calHooks       CalibrationHooks
 	calState       CalibrationState
+	calType        CalibrationType
 	calPhase       string
 	calError       string
+	calPulseUs     int
 	calResult      *CalibrationResultJSON
 }
 
@@ -115,7 +119,9 @@ func (s *Store) Update(in UpdateInput) {
 	}
 	cal := s.calibrationStatusLocked()
 	s.status.CalibrationState = string(cal.State)
+	s.status.CalibrationType = string(cal.Type)
 	s.status.CalibrationPhase = cal.Phase
+	s.status.CalibrationPulse = cal.PulseUs
 	s.status.CalibrationError = cal.Error
 	s.status.CalibrationResult = cal.Result
 }

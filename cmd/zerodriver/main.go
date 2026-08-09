@@ -86,10 +86,15 @@ func main() {
 		statusStore = web.NewStore()
 		statusStore.SetCalibrationHooks(web.CalibrationHooks{
 			Drive:                  devices.Motor.Drive,
+			SetThrottleUS:          devices.Motor.SetThrottleUS,
 			ReadIMU:                devices.IMU.Read,
 			Stop:                   devices.Motor.Stop,
 			ServoTrimUs:            cfg.Hardware.ServoTrimUs,
 			ThrottleForwardStartUs: cfg.Hardware.ThrottleForwardStartUs,
+			ThrottleReverseStartUs: cfg.Hardware.ThrottleReverseStartUs,
+			NeutralUs:              cfg.Hardware.ThrottleMinUs,
+			MaxUs:                  cfg.Hardware.ThrottleMaxUs,
+			ReverseUs:              cfg.Hardware.ThrottleReverseUs,
 		})
 		webSrv := web.NewServer(&cfg.Web, statusStore)
 		go func() {

@@ -91,6 +91,7 @@ type HardwareConfig struct {
 	ThrottleReverseUs     int    `yaml:"throttle_reverse_us"`      // reverse pulse (bidirectional)
 	ThrottleTrimUs        int    `yaml:"throttle_trim_us"`         // µs offset on ESC pulse
 	ThrottleForwardStartUs int   `yaml:"throttle_forward_start_us"` // min µs when throttle > 0
+	ThrottleReverseStartUs int   `yaml:"throttle_reverse_start_us"` // max µs when throttle < 0 (bidirectional)
 	ThrottleMap           string `yaml:"throttle_map"`             // neutral_forward, linear, bidirectional
 }
 

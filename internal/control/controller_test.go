@@ -18,7 +18,8 @@ func (m *mockMotor) Drive(steering, throttle float64) error {
 	m.throttle = throttle
 	return nil
 }
-func (m *mockMotor) Stop() error  { return m.Drive(0, 0) }
+func (m *mockMotor) SetThrottleUS(us int) error { return nil }
+func (m *mockMotor) Stop() error                { return m.Drive(0, 0) }
 func (m *mockMotor) Close() error { return nil }
 
 var _ hal.Motor = (*mockMotor)(nil)

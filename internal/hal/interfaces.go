@@ -25,6 +25,7 @@ type Camera interface {
 // Motor controls steering servo and throttle (RC car).
 type Motor interface {
 	Drive(steering, throttle float64) error
+	SetThrottleUS(us int) error
 	Stop() error
 	Close() error
 }

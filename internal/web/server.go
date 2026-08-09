@@ -185,16 +185,19 @@ func (s *Server) handleStop(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleCalibrate(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		state, phase, errMsg, result := s.store.calibrationSnapshot()
+		state, phase, errMsg, pulse, result := s.store.calibrationSnapshot()
 		writeJSON(w, map[string]any{
-			"state":  state,
-			"phase":  phase,
-			"error":  errMsg,
-			"result": result,
+			"state":    state,
+			"type":     s.store.calibrationType(),
+			"phase":    phase,
+			"pulse_us": pulse,
+			"error":    errMsg,
+			"result":   result,
 		})
 	case http.MethodPost:
 		var body struct {
-			Confirm bool `json:"confirm"`
+			Confirm bool   `json:"confirm"`
+			Type    string `json:"type"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			http.Error(w, "bad json", http.StatusBadRequest)
@@ -204,7 +207,15 @@ func (s *Server) handleCalibrate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "confirm required", http.StatusBadRequest)
 			return
 		}
-		if err := s.store.StartCalibration(); err != nil {
+		typ := CalibrationType(body.Type)
+		if typ == "" {
+			typ = CalibrationIMU
+		}
+		if typ != CalibrationIMU && typ != CalibrationDeadzone {
+			http.Error(w, "unknown calibration type", http.StatusBadRequest)
+			return
+		}
+		if err := s.store.StartCalibration(typ); err != nil {
 			if errors.Is(err, errCalibrationRunning) || errors.Is(err, errCalibrationUnavailable) {
 				http.Error(w, err.Error(), http.StatusConflict)
 				return

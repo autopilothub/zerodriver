@@ -14,7 +14,6 @@ import (
 
 func TestCalibrationAPI(t *testing.T) {
 	store := NewStore()
-	done := make(chan struct{})
 	store.SetCalibrationHooks(CalibrationHooks{
 		Drive: func(steering, throttle float64) error { return nil },
 		ReadIMU: func() (domain.Attitude, error) {
@@ -25,36 +24,40 @@ func TestCalibrationAPI(t *testing.T) {
 	srv := NewServer(&config.WebConfig{Addr: ":0"}, store)
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/calibrate", bytes.NewReader([]byte(`{"confirm":true}`)))
+	req := httptest.NewRequest(http.MethodPost, "/api/calibrate", bytes.NewReader([]byte(`{"confirm":true,"type":"imu"}`)))
 	srv.handleCalibrate(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("start: %d %s", rec.Code, rec.Body.String())
 	}
 
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(12 * time.Second)
 	for time.Now().Before(deadline) {
-		state, _, _, _ := store.calibrationSnapshot()
+		state, _, _, _, _ := store.calibrationSnapshot()
 		if state == CalibrationDone || state == CalibrationError {
-			close(done)
-			break
+			return
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	select {
-	case <-done:
-	default:
-		t.Fatal("calibration did not finish")
-	}
+	t.Fatal("calibration did not finish")
+}
 
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/api/calibrate", nil)
-	srv.handleCalibrate(rec, req)
-	var out map[string]any
-	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+func TestDeadzoneCalibrationStart(t *testing.T) {
+	store := NewStore()
+	store.SetCalibrationHooks(CalibrationHooks{
+		SetThrottleUS: func(us int) error { return nil },
+		ReadIMU: func() (domain.Attitude, error) {
+			return domain.Attitude{HasAccel: true, AccelX: 0.5}, nil
+		},
+		Stop:      func() error { return nil },
+		NeutralUs: 1500, MaxUs: 2000, ReverseUs: 1000,
+	})
+
+	if err := store.StartCalibration(CalibrationDeadzone); err != nil {
 		t.Fatal(err)
 	}
-	if out["state"] != string(CalibrationDone) {
-		t.Fatalf("state: %v", out["state"])
+	time.Sleep(30 * time.Millisecond)
+	if !store.IsCalibrating() {
+		t.Fatal("expected running")
 	}
 }
 

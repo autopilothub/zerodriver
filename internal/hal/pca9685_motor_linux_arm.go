@@ -23,6 +23,7 @@ func NewPCA9685Motor(i2cBus string, hw config.HardwareConfig) (*PCA9685Motor, er
 		ReverseUs:      hw.ThrottleReverseUs,
 		TrimUs:         hw.ThrottleTrimUs,
 		ForwardStartUs: hw.ThrottleForwardStartUs,
+		ReverseStartUs: hw.ThrottleReverseStartUs,
 		Map:            ThrottleMapMode(hw.ThrottleMap),
 	}
 	switch throttleCfg.Map {
@@ -75,6 +76,25 @@ func (m *PCA9685Motor) Drive(steering, throttle float64) error {
 // ThrottlePulse returns the ESC pulse width for a throttle command (diagnostics).
 func (m *PCA9685Motor) ThrottlePulse(throttle float64) int {
 	return ThrottleToPulseUs(throttle, m.cfg.Throttle)
+}
+
+func (m *PCA9685Motor) SetThrottleUS(us int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	steerPulse := ApplySteering(0, m.cfg.ServoMinUs, m.cfg.ServoCenterUs, m.cfg.ServoMaxUs, m.cfg.ServoTrimUs, m.cfg.SteeringInvert)
+	if err := m.pwm.SetPulseUs(m.cfg.SteeringChannel, steerPulse); err != nil {
+		return err
+	}
+
+	th := m.cfg.Throttle.withDefaults()
+	if us < th.MinUs {
+		us = th.MinUs
+	}
+	if us > th.MaxUs {
+		us = th.MaxUs
+	}
+	return m.pwm.SetPulseUs(m.cfg.ThrottleChannel, us)
 }
 
 func (m *PCA9685Motor) Stop() error {
