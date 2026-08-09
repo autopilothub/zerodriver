@@ -16,15 +16,19 @@ import (
 
 const (
 	bno085ReportIntervalUs = 50000 // 20 Hz
-	bno085InitWait         = 500 * time.Millisecond
+	bno085InitWait         = 800 * time.Millisecond
+	bno085FirstSampleWait  = 5 * time.Second
 )
 
 // BNO085 reads fused 9-axis orientation via CEVA SHTP (I2C 0x4A/0x4B).
 type BNO085 struct {
-	mu        sync.Mutex
+	mu        sync.RWMutex
 	sensor    *bno08x.BNO08X
 	transport *bno08x.I2CTransport
 	ctx       context.Context
+	last      domain.Attitude
+	hasLast   bool
+	done      chan struct{}
 }
 
 // NewBNO085 opens and initializes a BNO085/BNO08x at the given I2C address.
@@ -58,39 +62,59 @@ func NewBNO085(busName string, addr int) (*BNO085, error) {
 			return nil, fmt.Errorf("bno085 enable 0x%02X: %w", feature, err)
 		}
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
-	deadline := time.Now().Add(2 * time.Second)
+	b := &BNO085{
+		sensor:    sensor,
+		transport: transport,
+		ctx:       ctx,
+		done:      make(chan struct{}),
+	}
+	go b.pollLoop()
+
+	deadline := time.Now().Add(bno085FirstSampleWait)
 	for time.Now().Before(deadline) {
-		_ = sensor.Process(ctx)
-		if _, ok := sensor.GetQuaternion(); ok {
-			return &BNO085{sensor: sensor, transport: transport, ctx: ctx}, nil
+		b.mu.RLock()
+		ok := b.hasLast
+		b.mu.RUnlock()
+		if ok {
+			return b, nil
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
 
-	transport.Close()
+	b.Close()
 	return nil, fmt.Errorf("bno085 timeout waiting for rotation vector")
 }
 
-func (b *BNO085) Read() (domain.Attitude, error) {
+func (b *BNO085) pollLoop() {
+	ticker := time.NewTicker(5 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-b.done:
+			return
+		case <-ticker.C:
+			b.pollOnce()
+		}
+	}
+}
+
+func (b *BNO085) pollOnce() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	var ready bool
-	for i := 0; i < 25; i++ {
-		if err := b.sensor.Process(b.ctx); err != nil {
-			continue
-		}
-		if _, ok := b.sensor.GetQuaternion(); ok {
-			ready = true
-			break
-		}
+	if err := b.sensor.Process(b.ctx); err != nil {
+		return
 	}
-	if !ready {
-		return domain.Attitude{}, fmt.Errorf("bno085: no rotation vector")
+	if _, ok := b.sensor.GetQuaternion(); !ok {
+		return
 	}
+	b.last = b.buildAttitude()
+	b.hasLast = true
+}
 
+func (b *BNO085) buildAttitude() domain.Attitude {
 	q, _ := b.sensor.GetQuaternion()
 	pitch, roll, yaw := q.ToEuler()
 	heading := yaw
@@ -107,16 +131,29 @@ func (b *BNO085) Read() (domain.Attitude, error) {
 	}
 
 	if gyro, ok := b.sensor.GetGyroscope(); ok {
-		att.GyroZ = gyro[2] * 180 / math.Pi // rad/s → deg/s
+		att.GyroZ = gyro[2] * 180 / math.Pi
 	}
 	if mag, ok := b.sensor.GetMagnetometer(); ok {
 		att.MagX, att.MagY, att.MagZ = mag[0], mag[1], mag[2]
 	}
+	return att
+}
 
-	return att, nil
+func (b *BNO085) Read() (domain.Attitude, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if !b.hasLast {
+		return domain.Attitude{}, fmt.Errorf("bno085: no rotation vector")
+	}
+	return b.last, nil
 }
 
 func (b *BNO085) Close() error {
+	select {
+	case <-b.done:
+	default:
+		close(b.done)
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.transport != nil {
